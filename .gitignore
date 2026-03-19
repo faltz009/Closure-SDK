@@ -1,0 +1,5 @@
+# Rebasing for 1.0 — everything local until SDK refactor is complete
+*
+!.gitignore
+!README.md
+!LICENSE
