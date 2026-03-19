@@ -20,7 +20,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ClosureState:
     """A point on the ball. Contains the group name ("Sphere") and the
     quaternion (4 floats). This is a composition frozen at a moment in
@@ -39,7 +39,7 @@ class ClosureState:
         return f"ClosureState(group={self.group!r}, dim={self.dim})"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class CompareResult:
     """The verdict from compare(). drift is how far apart two points
     are on the ball. coherent is True if drift is below threshold,
@@ -54,14 +54,14 @@ class CompareResult:
         return f"CompareResult({label})"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class LocalizationResult:
     """The answer from binary search. index is where in the stream the
-    first divergence was found. checks is how many steps the search
-    took (always O(log n)).
+    first divergence was found (None if streams are coherent). checks
+    is how many steps the search took (always O(log n)).
     """
 
-    index: int
+    index: int | None
     checks: int
 
     def __repr__(self) -> str:

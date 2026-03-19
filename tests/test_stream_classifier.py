@@ -274,3 +274,12 @@ def test_exchange_symmetry_documented() -> None:
     e1 = closure.embed(b"identical")
     e2 = closure.embed(b"identical")
     assert closure.compare(e1, e2).coherent
+
+
+def test_invalid_side_raises_value_error() -> None:
+    c = StreamClassifier()
+    try:
+        c.ingest(b"x", 0, "soruce")
+        assert False, "should have raised ValueError"
+    except ValueError as e:
+        assert "soruce" in str(e)

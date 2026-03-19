@@ -48,17 +48,21 @@ class Seer:
             print(f"Drift detected: drift = {result.drift}")
     """
 
+    __slots__ = ("_monitor", "_ingest", "_ingest_many")
+
     def __init__(self) -> None:
-        self._group = GROUP_SPEC
-        self._monitor = closure_rs.StreamMonitor(GROUP_SPEC)
+        mon = closure_rs.StreamMonitor(GROUP_SPEC)
+        self._monitor = mon
+        self._ingest = mon.ingest
+        self._ingest_many = mon.ingest_many
 
     def ingest(self, record: bytes) -> None:
         """Feed one record into the running product."""
-        self._monitor.ingest(record)
+        self._ingest(record)
 
     def ingest_many(self, records: list[bytes]) -> None:
         """Feed many records at once."""
-        self._monitor.ingest_many(records)
+        self._ingest_many(records)
 
     def drift(self) -> float:
         """How far the current point is from identity (north pole).
@@ -69,7 +73,7 @@ class Seer:
     def state(self) -> ClosureState:
         """Snapshot the current point on the ball."""
         return ClosureState(
-            group=self._group,
+            group=GROUP_SPEC,
             element=np.array(self._monitor.closure_element()),
         )
 
@@ -80,12 +84,15 @@ class Seer:
 
     def reset(self) -> None:
         """Back to identity — start fresh."""
-        self._monitor.reset()
+        mon = self._monitor
+        mon.reset()
+        self._ingest = mon.ingest
+        self._ingest_many = mon.ingest_many
 
     @property
     def group(self) -> str:
         """The geometry spec (always "Sphere")."""
-        return self._group
+        return GROUP_SPEC
 
     def __len__(self) -> int:
         return len(self._monitor)
@@ -110,8 +117,9 @@ class Oracle:
             trace.append(record)
     """
 
+    __slots__ = ("_path", "_records")
+
     def __init__(self) -> None:
-        self._group = GROUP_SPEC
         self._path: Any | None = None
         self._records: list[bytes] = []
 
@@ -119,7 +127,6 @@ class Oracle:
     def from_records(cls, records: list[bytes]) -> "Oracle":
         """Build a full trace from a list of raw records."""
         obj = cls.__new__(cls)
-        obj._group = GROUP_SPEC
         obj._path = closure_rs.path_from_raw_bytes(GROUP_SPEC, records)
         obj._records = list(records)
         return obj
@@ -128,9 +135,9 @@ class Oracle:
         """Add one record to the trace."""
         self._records.append(record)
         if self._path is None:
-            self._path = closure_rs.path_from_raw_bytes(self._group, self._records)
+            self._path = closure_rs.path_from_raw_bytes(GROUP_SPEC, self._records)
         else:
-            elem = closure_rs.closure_element_from_raw_bytes(self._group, [record])
+            elem = closure_rs.closure_element_from_raw_bytes(GROUP_SPEC, [record])
             self._path.append(np.array(elem, dtype=np.float64))
 
     def check_global(self) -> float:
@@ -167,7 +174,7 @@ class Oracle:
         """Snapshot the current point on the ball (final running product)."""
         self._ensure_built()
         return ClosureState(
-            group=self._group,
+            group=GROUP_SPEC,
             element=np.array(self._path.closure_element()),
         )
 
@@ -180,7 +187,7 @@ class Oracle:
 
     @property
     def group(self) -> str:
-        return self._group
+        return GROUP_SPEC
 
     def __len__(self) -> int:
         return len(self._records)
@@ -192,7 +199,7 @@ class Oracle:
         if self._path is None:
             if not self._records:
                 raise ValueError("Oracle is empty — append records first")
-            self._path = closure_rs.path_from_raw_bytes(self._group, self._records)
+            self._path = closure_rs.path_from_raw_bytes(GROUP_SPEC, self._records)
 
 
 # ── Witness ───────────────────────────────────────────────────────────
@@ -211,8 +218,9 @@ class Witness:
             print(f"Corruption at index {result.index}")
     """
 
+    __slots__ = ("_group", "_elements", "_tree")
+
     def __init__(self, elements: list[np.ndarray]) -> None:
-        self._group_spec = GROUP_SPEC
         self._group = closure_rs.sphere()
         self._elements = np.array(elements)
         self._tree = closure_rs.HierarchicalClosure(self._group, self._elements)
@@ -246,7 +254,7 @@ class Witness:
         result = self._tree.localize(test_elements, threshold)
         index, checks, _depth = result
         return LocalizationResult(
-            index=index if index is not None else -1,
+            index=index,
             checks=checks,
         )
 
@@ -262,12 +270,12 @@ class Witness:
 
     @property
     def group(self) -> str:
-        return self._group_spec
+        return GROUP_SPEC
 
     def state(self) -> ClosureState:
         """The reference composition as a point on the ball."""
         path = closure_rs.GeometricPath.from_elements(self._group, self._elements)
-        return ClosureState(group=self._group_spec, element=np.array(path.closure_element()))
+        return ClosureState(group=GROUP_SPEC, element=np.array(path.closure_element()))
 
     def __repr__(self) -> str:
         n = len(self._elements)

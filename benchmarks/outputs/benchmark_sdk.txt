@@ -1,0 +1,86 @@
+========================================================================================
+  1. COMPARISON — Closure SDK vs Checksum vs Hash Chain vs Merkle Tree
+========================================================================================
+  End-to-end from raw 64-byte records. Full SDK pipeline (embed → compose).
+
+           n  Method                Build     Detect    Hot Chk     Locate  Checks  Extra
+  ──────────  ──────────────── ────────── ────────── ────────── ────────── ───────  ────────────────
+      10,000  SHA-256              1.8 ms     1.7 ms     0.4 μs          —       —  yes/no only
+              Hash Chain           7.6 ms     7.5 ms     0.1 μs     0.7 ms   7,501  OK
+              Merkle Tree         21.3 ms    21.5 ms     0.1 μs    12.0 μs      15  OK
+              Oracle (S³)         12.0 ms    11.8 ms     3.9 μs    11.1 μs      14  σ=1.1895 OK
+              Witness (S³)        21.5 ms    21.2 ms          —    20.8 ms      14  σ=1.1895 OK
+
+     100,000  SHA-256             17.8 ms    17.6 ms     0.4 μs          —       —  yes/no only
+              Hash Chain          77.3 ms    75.3 ms     0.1 μs     6.2 ms  75,001  OK
+              Merkle Tree        188.8 ms   189.5 ms     0.1 μs    14.5 μs      18  OK
+              Oracle (S³)        119.0 ms   122.1 ms     4.2 μs     8.0 μs      17  σ=0.6969 OK
+              Witness (S³)       232.3 ms   226.7 ms          —   210.5 ms      17  σ=0.6969 OK
+
+   1,000,000  SHA-256            180.3 ms   174.3 ms     0.4 μs          —       —  yes/no only
+              Hash Chain         760.4 ms   805.3 ms     0.1 μs    64.0 ms 750,001  OK
+              Merkle Tree          1.65 s     1.74 s     0.1 μs    25.3 μs      21  OK
+              Oracle (S³)          1.22 s     1.26 s     4.0 μs     6.9 μs      20  σ=1.4711 OK
+              Witness (S³)         2.24 s     2.18 s          —     2.18 s      20  σ=1.4711 OK
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  RESULTS AT SCALE (n = 1,000,000 records)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Build time (process all records once):
+    SHA-256            180.3 ms   ◄ fastest (hardware-accelerated)
+    Hash Chain         760.4 ms
+    Oracle (S³)          1.22 s
+    Merkle Tree          1.65 s   ◄ slowest
+
+  Find the corrupted record (localization):
+    Oracle               6.9 μs   (20 checks)    ◄ fastest
+    Merkle Tree         25.3 μs   (21 checks)   Oracle is 3.7× faster
+    Hash Chain          64.0 ms   (750,001 checks)   Oracle is 9,316× faster
+
+  What each method tells you when it finds corruption:
+    SHA-256      "something changed"                       (yes/no)
+    Hash Chain   "something changed"                       (yes/no)
+    Merkle       "record #750,000 differs"                  (which record)
+    Closure      "record #750,000 drifted by 1.4711"     (which, how much, which direction)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Capability                                  SHA  Chain  Merkle    Closure
+  ──────────────────────────────────────── ────── ────── ─────── ──────────
+  Detects corruption                          Yes    Yes     Yes        Yes
+  Reports corruption magnitude                 No     No      No    YES (σ)
+  Localizes to exact element                   No   O(n) O(lg n)    O(lg n)
+  Detects reordering (S³)                      No    Yes      No        YES
+  Lossless element recovery                    No     No      No        YES
+  Composable across subsystems                 No     No      No        YES
+  Color-channel diagnostics                    No     No      No        YES
+  Cryptographic security                      Yes    Yes     Yes       No *
+
+  * Closure is not cryptographically secure standalone — pair with Merkle/chain
+    for adversarial resistance. Closure catches problems fast; the chain proves them.
+
+
+========================================================================================
+  2. COST — How Much Extra Work Does Closure Add?
+========================================================================================
+
+  Every integrity system hashes your data first. The question is:
+  how much does closure's math (group composition) cost on top of that hash?
+
+  We measure three things per event:
+    Hash only     = SHA-256 of the raw record (what you'd pay anyway)
+    Hash + Closure = SHA-256 + embedding + group composition (total closure cost)
+    Seer.ingest   = the SDK streaming API end-to-end
+
+           n     Hash only     Seer.ingest      Overhead
+  ──────────  ────────────  ──────────────  ────────────
+      10,000       702 ns/e         744 ns/e       +5.9%
+     100,000       676 ns/e         737 ns/e       +9.1%
+   1,000,000       695 ns/e         734 ns/e       +5.6%
+
+  ─────────────────────────────────────────────────────────────────────────
+  Bottom line:
+    Seer.ingest runs hash + embed + compose in a single call.
+    The group composition on S³ adds a small constant on top of SHA-256.
+    You're already paying for the hash; the algebra is nearly free.
+  ─────────────────────────────────────────────────────────────────────────

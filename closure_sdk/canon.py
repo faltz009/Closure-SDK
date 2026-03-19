@@ -170,9 +170,11 @@ class StreamClassifier:
         if side == "source":
             own = self._unmatched_source
             other = self._unmatched_target
-        else:
+        elif side == "target":
             own = self._unmatched_target
             other = self._unmatched_source
+        else:
+            raise ValueError(f"side must be 'source' or 'target', got {side!r}")
 
         if payload in other:
             # Match found on the opposite side.

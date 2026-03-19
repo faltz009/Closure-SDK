@@ -1,0 +1,126 @@
+============================================================================================
+  CLOSURE SDK — STREAM CLASSIFICATION & MULTI-FAULT LOCALIZATION
+============================================================================================
+============================================================================================
+  SECTION 1: Multi-Fault Localization  (localize_all)
+============================================================================================
+
+  Given two complete sequences, find EVERY incident — not just the first.
+  For each incident: what record, what type (missing or reordered).
+
+  Scenario 1 — Missing records:
+    Source: ['tx-001', 'tx-002', 'tx-003', 'tx-004', 'tx-005']
+    Target: ['tx-001', 'tx-003', 'tx-005']
+    Incidents found: 2
+      missing              record=b'tx-002'    source_idx=1  target_idx=None
+      missing              record=b'tx-004'    source_idx=3  target_idx=None
+
+  Scenario 2 — Reordered records:
+    Source: ['a', 'b', 'c', 'd', 'e']
+    Target: ['a', 'c', 'b', 'd', 'e']
+    Incidents found: 1
+      content_mismatch     record=b'b'         source_idx=1  target_idx=2
+
+  Scenario 3 — Mixed (missing + content mismatch):
+    Source: ['x', 'y', 'z', 'w', 'v']
+    Target: ['x', 'z', 'w']
+    Incidents found: 2
+      missing              record=b'y'         source_idx=1  target_idx=None
+      missing              record=b'v'         source_idx=4  target_idx=None
+
+  Scenario 4 — Coherent (identical sequences):
+    Incidents found: 0
+
+  All scenarios correct: PASS
+
+
+============================================================================================
+  SECTION 2: Stream Classification  (StreamClassifier)
+============================================================================================
+
+  The oracle problem: when a record arrives on one side but not the other,
+  is it missing or just late? At arrival time, you cannot know.
+
+  The StreamClassifier solves this with a bounded grace period:
+    1. Record arrives on one side → held as unresolved
+    2. Same record arrives on other side within grace → silent resolve
+    3. Grace expires → promoted to "missing"
+    4. Record arrives after promotion → reclassified to "reorder"
+
+  Every step is the same binary decision. The recursion is the algorithm.
+
+  Demo 1 — Coherent stream (10 records, both sides):
+    Records processed: 10
+    Incidents: 0
+    Status: COHERENT
+
+  Demo 2 — Missing record (source has 'tx-99', target does not):
+    After grace period: 1 incident(s)
+    Type: missing
+    Record: b'tx-99'
+    Source index: 0
+    Target index: None
+
+  Demo 3 — Late arrival reclassification:
+    Step 1: source gets 'late-record', grace expires → missing
+    Step 2: target gets 'late-record' (late arrival)
+    Reclassified to: content_mismatch
+    Source index: 0 → Target index: 5
+    Reclassified count: 1
+
+  Demo 4 — Chained errors (the recursive property):
+    After any misalignment, only two possibilities exist:
+      a) The record arrives late → reclassify to reorder
+      b) Another record is missing → same case, same solution
+    The grace period handles both identically. That's the recursion.
+
+    Source sends A, B, C — target silent.
+    After grace: 3 missing incidents
+    Target sends 'A' (late) → reclassified to content_mismatch
+    Target sends 'B' (late) → reclassified to content_mismatch
+    Target sends 'C' (late) → reclassified to content_mismatch
+
+    Final state:
+      Unresolved source: 0
+      Unresolved target: 0
+      Reclassified: 3
+
+  All demos correct: PASS
+
+
+============================================================================================
+  SECTION 3: Incident Valence  (expose_incident)
+============================================================================================
+
+  Each incident carries a color signature from the Hopf decomposition.
+  The axis tells you the TYPE of failure (existence vs position).
+  The channels tell you the SHAPE of the divergence.
+
+  Source: ['a', 'b', 'c', 'd']
+  Target: ['a', 'c']
+  Faults: 2
+
+    Record     Type                 Axis                σ        R        G        B
+    ────────── ──────────────────── ──────────── ──────── ──────── ──────── ────────
+    b'b'       missing              existence      2.4460  +0.3114  +0.4065  +0.8589
+    b'd'       missing              existence      2.4460  +0.3114  +0.4065  +0.8589
+
+
+============================================================================================
+  SUMMARY
+============================================================================================
+  The canon provides two tools for finding what broke:
+
+    localize_all       Static. Two complete sequences → every incident.
+                       Compose, search, classify, remove, repeat.
+
+    StreamClassifier   Stream. Records arrive in real-time.
+                       Match, wait, promote, reclassify.
+                       The oracle problem → bounded binary decision.
+
+  Both reduce to the same algebra: composition on S³,
+  inversion for subtraction, sigma for measurement.
+
+    Multi-fault localization: PASS
+    Stream classification: PASS
+

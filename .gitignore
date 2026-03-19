@@ -47,3 +47,13 @@
 !tests/test_hierarchy.py
 !tests/test_fast_path.py
 !tests/test_stream_monitor.py
+
+# Benchmarks and demos
+!benchmarks/
+!benchmarks/benchmark_sdk.py
+!benchmarks/demo_operations.py
+!benchmarks/demo_stream.py
+!benchmarks/outputs/
+!benchmarks/outputs/benchmark_sdk.txt
+!benchmarks/outputs/demo_operations.txt
+!benchmarks/outputs/demo_stream.txt

@@ -165,3 +165,19 @@ def test_expose_incident_returns_incident_valence() -> None:
     assert isinstance(iv, closure.IncidentValence)
     assert iv.axis in ("existence", "position")
     assert isinstance(iv.sigma, float)
+
+
+def test_oracle_localize_coherent_returns_none() -> None:
+    records = [b"a", b"b", b"c"]
+    ref = closure.Oracle.from_records(records)
+    copy = closure.Oracle.from_records(records)
+    result = ref.localize_against(copy)
+    assert result.index is None
+    assert result.checks >= 1
+
+
+def test_witness_localize_coherent_returns_none() -> None:
+    records = [b"a", b"b", b"c"]
+    w = closure.Witness.from_records(records)
+    result = w.localize(records)
+    assert result.index is None
