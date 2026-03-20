@@ -5,6 +5,7 @@
 !.github/
 !.github/workflows/
 !.github/workflows/test.yml
+!.github/workflows/publish.yml
 
 # Documentation
 !.gitignore

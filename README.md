@@ -1,6 +1,6 @@
 # Closure SDK
 
-A primitive data structure — the geometry of ordered information.
+
 
 ## What is this
 
@@ -47,11 +47,23 @@ Compose the expected sequence, then compare incoming data against it. A complete
 **"Can two parties confirm they have the same data without sharing it?"**
 Each side composes locally and shares only the summary. `bind()` determines whether they match, and the raw data never crosses the wire.
 
-## Quick start
+## Install
 
 ```bash
-pip install -e '.[dev]'
+pip install closure-sdk
 ```
+
+That's it. Pre-built wheels for Linux, macOS, and Windows — includes the Rust engine, no toolchain required.
+
+**From source** (if you want to build it yourself):
+
+```bash
+git clone https://github.com/faltz009/Closure-SDK.git
+cd Closure-SDK
+pip install -e '.[dev]'   # requires Rust toolchain
+```
+
+## Quick start
 
 ```python
 import closure_sdk as closure
@@ -103,11 +115,7 @@ valence = closure.expose(element)
 
 ## The CLI
 
-Three commands, one tool. Install and run — no code required.
-
-```bash
-pip install -e '.[dev]'
-```
+Three commands, one tool. No code required.
 
 **`closure identity`** — you have two files, you want to know every discrepancy between them. Gilgamesh composes both on the sphere, walks them side by side, and gives you a table: what broke, where in each file, the actual record. Clean summary to the terminal, full report saved as JSON with color channels.
 
