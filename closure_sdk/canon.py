@@ -283,24 +283,11 @@ def gilgamesh(
     *,
     max_faults: int = 1000,
 ) -> list[IncidentReport]:
-    """Compose both sequences on S³. If they diverge, classify every
-    fault. Three steps:
+    """Compose both sequences on S³. Walk source. Classify from the fiber.
 
-        1. Compose & search — embed both sequences on S³, build both
-           paths, binary-search for the first divergence. O(n) embed,
-           O(log n) search. If σ ≈ 0 → streams agree, return empty.
-
-        2. Narrow — two pointers skip the matching prefix and suffix.
-           Only the dirty region in the middle needs classification.
-
-        3. Classify — walk the dirty region. For each record, counter
-           lookup tells us if it exists on the other side (O(1)).
-           Missing → report. Present at different position → reorder.
-           Paired records are removed from the counter, preserving
-           the composition (same element on both sides → inverse
-           cancels via the Hopf fiber).
-
-    Build once. Search once. Walk the dirty region only.
+    Coheres  — record at expected position. Do nothing.
+    Reorder  — record exists in target, different position. Flag. No offset.
+    Missing  — record absent from target. Flag. Offset += 1.
     """
     n_src = len(source_records)
     n_tgt = len(target_records)
@@ -308,7 +295,7 @@ def gilgamesh(
     if n_src == 0 and n_tgt == 0:
         return []
 
-    # --- step 1: compose both on S³, check coherence ---
+    # --- compose both on S³, localize ---
     group = closure_rs.sphere()
 
     def _embed_all(records: list[bytes]) -> np.ndarray:
@@ -323,87 +310,150 @@ def gilgamesh(
         ]
         return np.ascontiguousarray(np.vstack(elems), dtype=np.float64)
 
-    src_elements = _embed_all(source_records)
-    tgt_elements = _embed_all(target_records)
-
-    src_path = closure_rs.GeometricPath.from_elements(group, src_elements)
-    tgt_path = closure_rs.GeometricPath.from_elements(group, tgt_elements)
+    src_path = closure_rs.GeometricPath.from_elements(group, _embed_all(source_records))
+    tgt_path = closure_rs.GeometricPath.from_elements(group, _embed_all(target_records))
     first_fault, checks = src_path.localize_against(tgt_path)
 
     if first_fault is None:
-        return []  # σ ≈ 0, streams agree
+        return []
 
-    # --- step 2: narrow — skip matching prefix and suffix ---
-    # Front pointer: advance while records match
-    front = 0
-    shared = min(n_src, n_tgt)
-    while front < shared and source_records[front] == target_records[front]:
-        front += 1
+    # Lookup: does this payload exist on the other side? (W axis)
+    # And where? (RGB axis). Built from the composed sequences.
+    src_set = Counter(source_records)
+    tgt_set = Counter(target_records)
 
-    # Back pointer: advance inward while records match
-    back_src = n_src - 1
-    back_tgt = n_tgt - 1
-    while (back_src > front and back_tgt > front
-           and source_records[back_src] == target_records[back_tgt]):
-        back_src -= 1
-        back_tgt -= 1
-
-    # Dirty region: source[front..back_src], target[front..back_tgt]
-    dirty_src = source_records[front:back_src + 1]
-    dirty_tgt = target_records[front:back_tgt + 1]
-
-    # --- step 3: classify the dirty region ---
-    # Position map: payload → list of positions in dirty target
+    # Position lookup: payload → list of positions on each side.
     tgt_positions: dict[bytes, list[int]] = {}
-    for i, rec in enumerate(dirty_tgt):
-        tgt_positions.setdefault(rec, []).append(i)
+    for idx, rec in enumerate(target_records):
+        tgt_positions.setdefault(rec, []).append(idx)
+    src_positions: dict[bytes, list[int]] = {}
+    for idx, rec in enumerate(source_records):
+        src_positions.setdefault(rec, []).append(idx)
 
-    # Multiset count of what's available on the target side
-    tgt_counts = Counter(dirty_tgt)
+    # Track consumed positions so reordered records get skipped.
+    consumed_src: set[int] = set()
+    consumed_tgt: set[int] = set()
 
     faults: list[IncidentReport] = []
-    paired_tgt: set[int] = set()  # dirty-region indices already matched
+    i = 0  # source pointer
+    j = 0  # target pointer
 
-    for i, rec in enumerate(dirty_src):
-        src_orig = front + i  # original index in source_records
+    while i < n_src and j < n_tgt:
+        if len(faults) >= max_faults:
+            break
 
-        if tgt_counts.get(rec, 0) == 0:
-            # not in target → missing
+        # Skip positions already consumed by earlier reorder pairings.
+        while i < n_src and i in consumed_src:
+            i += 1
+        while j < n_tgt and j in consumed_tgt:
+            j += 1
+        if i >= n_src or j >= n_tgt:
+            break
+
+        if source_records[i] == target_records[j]:
+            # Coheres. Advance both.
+            src_set[source_records[i]] -= 1
+            tgt_set[target_records[j]] -= 1
+            i += 1
+            j += 1
+            continue
+
+        # Mismatch. Check both payloads against the other side.
+        src_in_tgt = tgt_set.get(source_records[i], 0) > 0
+        tgt_in_src = src_set.get(target_records[j], 0) > 0
+
+        if not src_in_tgt:
+            # src[i] not in target at all. W axis broke. Missing.
             faults.append(IncidentReport(
-                "missing", src_orig, None, rec,
+                "missing", i, None, source_records[i],
                 checks if not faults else 0,
             ))
+            src_set[source_records[i]] -= 1
+            i += 1
+        elif not tgt_in_src:
+            # tgt[j] not in source at all. W axis broke. Missing.
+            faults.append(IncidentReport(
+                "missing", None, j, target_records[j],
+                checks if not faults else 0,
+            ))
+            tgt_set[target_records[j]] -= 1
+            j += 1
         else:
-            # find first unpaired target position for this payload
-            tgt_local = None
-            for candidate in tgt_positions.get(rec, []):
-                if candidate not in paired_tgt:
-                    tgt_local = candidate
+            # Both exist on the other side. RGB axis broke. Reorder.
+            # The geometry tells us which one is displaced:
+            # look up actual positions, compare distance.
+            src_rec = source_records[i]
+            tgt_rec = target_records[j]
+
+            # Where does src[i] actually live in target?
+            actual_tgt = None
+            for pos in tgt_positions[src_rec]:
+                if pos not in consumed_tgt:
+                    actual_tgt = pos
                     break
 
-            if tgt_local is None:
-                # all copies already paired → extra copy, missing
+            # Where does tgt[j] actually live in source?
+            actual_src = None
+            for pos in src_positions[tgt_rec]:
+                if pos not in consumed_src:
+                    actual_src = pos
+                    break
+
+            src_dist = abs(actual_tgt - j) if actual_tgt is not None else 0
+            tgt_dist = abs(actual_src - i) if actual_src is not None else 0
+
+            if src_dist > tgt_dist:
+                # src[i] is further from where it should be — it's displaced.
                 faults.append(IncidentReport(
-                    "missing", src_orig, None, rec, 0,
+                    "reorder", i, actual_tgt, src_rec,
+                    checks if not faults else 0,
                 ))
+                src_set[src_rec] -= 1
+                tgt_set[src_rec] -= 1
+                consumed_tgt.add(actual_tgt)
+                i += 1
+            elif tgt_dist > src_dist:
+                # tgt[j] is further — it's displaced.
+                faults.append(IncidentReport(
+                    "reorder", actual_src, j, tgt_rec,
+                    checks if not faults else 0,
+                ))
+                src_set[tgt_rec] -= 1
+                tgt_set[tgt_rec] -= 1
+                consumed_src.add(actual_src)
+                j += 1
             else:
-                tgt_orig = front + tgt_local  # original index in target
-                paired_tgt.add(tgt_local)
-                tgt_counts[rec] -= 1
+                # Equal distance — swap. Both displaced. Flag both.
+                faults.append(IncidentReport(
+                    "reorder", i, actual_tgt, src_rec,
+                    checks if not faults else 0,
+                ))
+                faults.append(IncidentReport(
+                    "reorder", actual_src, j, tgt_rec, 0,
+                ))
+                src_set[src_rec] -= 1
+                tgt_set[src_rec] -= 1
+                src_set[tgt_rec] -= 1
+                tgt_set[tgt_rec] -= 1
+                consumed_tgt.add(actual_tgt)
+                consumed_src.add(actual_src)
+                i += 1
+                j += 1
 
-                if src_orig != tgt_orig:
-                    # same record, different position → reorder
-                    faults.append(IncidentReport(
-                        "reorder", src_orig, tgt_orig, rec, 0,
-                    ))
-                # else: same position in dirty region → coherent, skip
-
-    # Any unpaired target records are missing from source
-    for j in range(len(dirty_tgt)):
-        if j not in paired_tgt:
-            tgt_orig = front + j
+    # Remaining source records are missing from target.
+    while i < n_src and len(faults) < max_faults:
+        if i not in consumed_src:
             faults.append(IncidentReport(
-                "missing", None, tgt_orig, dirty_tgt[j], 0,
+                "missing", i, None, source_records[i], 0,
             ))
+        i += 1
+
+    # Remaining target records are missing from source.
+    while j < n_tgt and len(faults) < max_faults:
+        if j not in consumed_tgt:
+            faults.append(IncidentReport(
+                "missing", None, j, target_records[j], 0,
+            ))
+        j += 1
 
     return faults[:max_faults]

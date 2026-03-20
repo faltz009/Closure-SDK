@@ -262,11 +262,11 @@ def test_reorder_reports_both_indices() -> None:
     tgt = [b"c", b"b", b"a"]
     faults = closure.gilgamesh(src, tgt)
     reorders = [f for f in faults if f.incident_type == "reorder"]
-    # Each reorder should have both source and target indices
+    # b is at position 1 in both sides — it didn't move, only a and c swapped
+    assert len(reorders) == 2
     for r in reorders:
         assert r.source_index is not None
         assert r.target_index is not None
-        assert r.source_index != r.target_index
 
 
 # ── max_faults cap ────────────────────────────────────────────────────

@@ -3,7 +3,7 @@
 The ball holds full-color quaternions. This module is the prism that
 splits them into human-readable channels using the Hopf fibration.
 
-Two operations:
+Three operations:
 
     expose(element)              — any point on the ball → Valence.
                                    Works at every step of composition,
@@ -12,6 +12,11 @@ Two operations:
     expose_incident(inc, drift)  — a localized incident → IncidentValence.
                                    Same channels, plus structural labels:
                                    which positions, what payload, what broke.
+
+    bind(a, b)                   — the connector. Two spheres → Binding.
+                                   Checks both the equal and inverse
+                                   relationships in one pass. Returns which
+                                   holds (if either) and the gap's colors.
 
 The 3+1 channels:
 
@@ -37,6 +42,10 @@ from numpy.typing import NDArray
 
 from .hopf import hopf_decompose
 from .canon import IncidentReport
+
+# The S³ group object — needed for compose and inverse in bind().
+import closure_rs
+_SPHERE = closure_rs.sphere()
 
 
 def _to_quaternion(element: NDArray[np.float64]) -> NDArray[np.float64]:
@@ -132,4 +141,90 @@ def expose_incident(incident: IncidentReport, drift_element: NDArray[np.float64]
         sigma=float(hopf["sigma"]),
         base=tuple(float(x) for x in hopf["base"]),
         phase=float(hopf["phase"]),
+    )
+
+
+@dataclass(frozen=True)
+class Binding:
+    """The connector between two spheres.
+
+    Takes two points on the ball and checks both relationships:
+    equal (A · inv(B) = identity) and inverse (A · B = identity).
+
+    relation  — "equal", "inverse", or "disordered".
+    gap       — the Valence of whichever product was closer to identity.
+    sigma     — the σ of that gap (0 = perfect match).
+    """
+
+    relation: str  # "equal" | "inverse" | "disordered"
+    gap: Valence
+    sigma: float
+
+
+def bind(
+    a: NDArray[np.float64],
+    b: NDArray[np.float64],
+    *,
+    threshold: float = 1e-10,
+) -> Binding:
+    """The connector. Takes two points on the ball, computes both
+    products — A · inv(B) and A · B — and determines the relationship
+    between them.
+
+    If the first product collapses to identity, the spheres are equal:
+    they represent the same composition. If the second collapses to
+    identity, they are inverses: one is the algebraic complement of
+    the other. Otherwise the relationship is disordered, and the gap's
+    valence describes its shape.
+    """
+    qa = _to_quaternion(a)
+    qb = _to_quaternion(b)
+
+    # Equal check: A · inv(B) → identity?
+    inv_b = _SPHERE.inverse(qb)
+    gap_eq = _SPHERE.compose(qa, inv_b)
+    hopf_eq = hopf_decompose(np.array(gap_eq, dtype=np.float64))
+    sigma_eq = float(hopf_eq["sigma"])
+
+    # Inverse check: A · B → identity?
+    gap_inv = _SPHERE.compose(qa, qb)
+    hopf_inv = hopf_decompose(np.array(gap_inv, dtype=np.float64))
+    sigma_inv = float(hopf_inv["sigma"])
+
+    if sigma_eq < threshold:
+        return Binding(
+            relation="equal",
+            gap=Valence(
+                sigma=sigma_eq,
+                base=tuple(float(x) for x in hopf_eq["base"]),
+                phase=float(hopf_eq["phase"]),
+            ),
+            sigma=sigma_eq,
+        )
+
+    if sigma_inv < threshold:
+        return Binding(
+            relation="inverse",
+            gap=Valence(
+                sigma=sigma_inv,
+                base=tuple(float(x) for x in hopf_inv["base"]),
+                phase=float(hopf_inv["phase"]),
+            ),
+            sigma=sigma_inv,
+        )
+
+    # Disordered — return whichever gap was closer
+    if sigma_eq <= sigma_inv:
+        hopf_use, sigma_use = hopf_eq, sigma_eq
+    else:
+        hopf_use, sigma_use = hopf_inv, sigma_inv
+
+    return Binding(
+        relation="disordered",
+        gap=Valence(
+            sigma=sigma_use,
+            base=tuple(float(x) for x in hopf_use["base"]),
+            phase=float(hopf_use["phase"]),
+        ),
+        sigma=sigma_use,
     )

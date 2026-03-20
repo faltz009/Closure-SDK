@@ -21,8 +21,10 @@ Lenses (observe the composition at different focal lengths):
 The chain (translates ball geometry into color channels):
     expose            — any point → Valence(σ, RGB, W)
     expose_incident   — incident → IncidentValence with labels
+    bind              — two points → Binding (equal, inverse, or disordered)
     Valence           — σ + base(R,G,B) + phase(W)
     IncidentValence   — channels + positions + payload + axis
+    Binding           — relation + gap valence + σ
 
 The canon (finds what broke):
     gilgamesh         — static: compose, narrow, classify
@@ -38,7 +40,7 @@ Answer formats:
 from .lenses import Seer, Oracle, Witness
 from .state import ClosureState, CompareResult, LocalizationResult
 from .ops import embed, compose, invert, sigma, diff, compare
-from .valence import Valence, IncidentValence, expose, expose_incident
+from .valence import Valence, IncidentValence, Binding, expose, expose_incident, bind
 from .canon import RetentionWindow, IncidentReport, gilgamesh, Enkidu
 
 __all__ = [
@@ -66,6 +68,8 @@ __all__ = [
     # Valence
     "Valence",
     "IncidentValence",
+    "Binding",
     "expose",
     "expose_incident",
+    "bind",
 ]

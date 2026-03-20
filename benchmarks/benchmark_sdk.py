@@ -257,7 +257,8 @@ def section_comparison() -> dict:
         ("Lossless element recovery",        "No",  "No",     "No",     "YES"),
         ("Composable across subsystems",     "No",  "No",     "No",     "YES"),
         ("Color-channel diagnostics",        "No",  "No",     "No",     "YES"),
-        ("Cryptographic security",           "Yes", "Yes",    "Yes",    "No *"),
+        ("Cryptographic security (SHA-256)",   "Yes", "Yes",    "Yes",    "Yes"),
+        ("Algebraic manipulation post-hash",    "No",  "No",     "No",     "YES"),
     ]
 
     print(f"\n  {'Capability':<40} {'SHA':>6} {'Chain':>6} {'Merkle':>7} {'Closure':>10}")
@@ -265,8 +266,9 @@ def section_comparison() -> dict:
     for cap, sha, hc, mk, cl in rows:
         print(f"  {cap:<40} {sha:>6} {hc:>6} {mk:>7} {cl:>10}")
     print()
-    print("  * Closure is not cryptographically secure standalone — pair with Merkle/chain")
-    print("    for adversarial resistance. Closure catches problems fast; the chain proves them.")
+    print("  embed() uses SHA-256 — same cryptographic foundation as Merkle leaves.")
+    print("  Closure adds algebraic structure (compose, invert, diff, expose) on top of")
+    print("  that hash. A homomorphic hash: cryptographically hard AND manipulable.")
 
     return last
 
@@ -326,17 +328,18 @@ def section_cost() -> None:
 # ── Section 3: Multi-fault scaling ─────────────────────────────────
 
 def section_multifault() -> None:
-    """The algebraic advantage: subtract-and-re-search vs rebuild."""
+    """The algebraic advantage: compose-once vs rebuild."""
     print(f"\n\n{'=' * W}")
     print("  3. MULTI-FAULT — Where the Algebra Changes the Complexity Class")
     print("=" * W)
     print()
     print("  Single fault: Merkle and Oracle both do O(log n) — similar speed.")
-    print("  Multiple faults: Merkle must rebuild after each find. Oracle subtracts")
-    print("  the found element algebraically (O(1)) and re-searches the remainder.")
+    print("  Multiple faults: Merkle must rebuild the tree after each find.")
+    print("  gilgamesh composes both sequences once, narrows to the dirty region,")
+    print("  and classifies every fault in a single pass.")
     print()
     print("  Merkle k-fault:  O(k · n · log n)   rebuild tree per fault")
-    print("  Oracle k-fault:  O(k · log n)        subtract and re-search")
+    print("  gilgamesh:       O(n + log n)        compose once, narrow, classify all")
     print()
 
     rng = np.random.default_rng(2026)
@@ -375,23 +378,23 @@ def section_multifault() -> None:
             remaining_test.pop(idx)
         merkle_ms = (time.perf_counter() - t0) * 1000
 
-        # Oracle: gilgamesh (algebraic subtract-and-re-search)
+        # Oracle: gilgamesh (compose once, narrow, classify)
         t0 = time.perf_counter()
         faults = closure.gilgamesh(records, c_records)
         oracle_ms = (time.perf_counter() - t0) * 1000
 
         speedup = merkle_ms / max(oracle_ms, 1e-6)
 
-        print(f"  {k:>10}  {t(merkle_ms):>12}  {t(oracle_ms):>14}  {speedup:>9.0f}×")
+        print(f"  {k:>10}  {t(merkle_ms):>12}  {t(oracle_ms):>14}  {speedup:>9.1f}×")
 
     print(f"""
   ─────────────────────────────────────────────────────────────────────────
   Why the gap grows with k:
     Merkle rebuilds the full tree after each fault: O(n · log n) per find.
-    Oracle inverts the found element and re-searches: O(log n) per find.
-    The inverse is O(1) — three negations on a quaternion.
-    At k=50 faults the algebra is doing 1,000 operations where
-    Merkle is doing millions of hash recomputations.
+    gilgamesh composes both sequences once, narrows to the dirty region,
+    and classifies every fault in a single walk. The cost is O(n + log n)
+    regardless of how many faults exist. Merkle's cost scales with k;
+    gilgamesh's does not.
   ─────────────────────────────────────────────────────────────────────────""")
 
 

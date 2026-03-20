@@ -45,6 +45,15 @@ satellite telemetry, event streams — anything ordered.
                             detectable. Proven (Theorem 2).
     Real-time streaming   — classify incidents as records arrive, before
                             either stream is complete.
+    Identity binding      — two systems prove they hold the same data by
+                            comparing elements, never the data itself. One
+                            call checks both products: equal, inverse, or
+                            disordered.
+    Cryptographic summary — embed() hashes with SHA-256 before composing.
+                            The element is a 32-byte summary that cannot be
+                            reversed to the original data, but can be
+                            composed, diffed, inverted, and decomposed into
+                            channels. A hash you can do algebra on.
 
 ## What problems this solves
 
@@ -57,6 +66,7 @@ satellite telemetry, event streams — anything ordered.
     Replica consistency                do these two copies still match?
     Pipeline integrity                 did records get dropped, duplicated, or reordered?
     Cross-system reconciliation        do these two systems agree on what happened?
+    Zero-knowledge verification        do we hold the same data, without revealing it?
 
 ## Original contributions
 
@@ -194,7 +204,7 @@ THE CANON (finds what broke — two modes, same classification)
 │  and classifies WHAT: missing (W broke) or reorder (RGB broke).
 │
 ├── STATIC MODE (both streams complete)
-│   └── gilgamesh(source, target)     canon.py:280    compose, narrow, classify
+│   └── gilgamesh(source, target)     canon.py:280    compose, walk both chains, classify
 │                                                        O(n + log n)
 │
 ├── STREAM MODE (records arrive one at a time)
@@ -224,11 +234,14 @@ THE CHAIN (Hopf projection → color channels)
 │
 ├── EXPOSE (public interface)            valence.py
 │   ├── expose(element)                  valence.py:94   any point → Valence
-│   └── expose_incident(inc, drift)      valence.py:110  incident → IncidentValence
+│   ├── expose_incident(inc, drift)      valence.py:110  incident → IncidentValence
+│   └── bind(a, b)                       valence.py:139  two points → Binding
+│                                                        equal, inverse, or disordered
 │
 └── CHANNELS                             valence.py
     ├── Valence                          valence.py:51   σ + base(R,G,B) + phase(W)
-    └── IncidentValence                  valence.py:65   channels + positions + payload + axis
+    ├── IncidentValence                  valence.py:65   channels + positions + payload + axis
+    └── Binding                          valence.py:139  relation + gap valence + σ
 
 
 PIPELINE (data flows top to bottom)
@@ -245,6 +258,7 @@ PIPELINE (data flows top to bottom)
     sigma() / compare()      ops.py:61 / :79 ───── TOOLS measure on the sphere
         │
         ├── coherent? → done
+        ├── bind(a, b) ─────── valence.py:139 ──── BINDING equal / inverse / disordered
         │
         ▼
     gilgamesh()  ─┐
@@ -263,13 +277,13 @@ PIPELINE (data flows top to bottom)
 
 FRONT DOOR
 
-    __init__.py              19 symbols exported
+    __init__.py              21 symbols exported
     closure_sdk/
       ops.py                 the sphere's tools (6)
       lenses.py              Seer, Oracle, Witness
       state.py               answer formats (3)
       canon.py               gilgamesh, Enkidu, IncidentReport, RetentionWindow
-      valence.py             expose, expose_incident, Valence, IncidentValence
+      valence.py             expose, expose_incident, bind, Valence, IncidentValence, Binding
       hopf.py                the prism (internal, wrapped by valence)
 ```
 
@@ -486,6 +500,49 @@ Closure gives engineered systems the same ability. The algebra detects
 and localizes divergence with exact sensitivity (Theorems 1 and 2).
 The application layer decides what to do about it.
 
+### The cryptographic property
+
+The SDK's security rests on a two-layer pipeline:
+
+    Layer 1: embed() hashes raw bytes with SHA-256 before placing
+    them on the sphere. After this step, the original content is
+    irreversible — no one can recover what the bytes were.
+
+    Layer 2: all subsequent operations — compose, invert, diff,
+    expose, bind — act on these hashed elements using the algebraic
+    structure of S³. The operations manipulate the geometry without
+    ever touching the original data, which was discarded at the
+    hash boundary.
+
+This gives the SDK a property known as homomorphic hashing: the
+hash is cryptographically hard (SHA-256 preimage resistance) AND
+algebraically manipulable (S³ group operations). Most hashes are
+one or the other. SHA-256 is hard but opaque — you can compare
+two hashes and nothing else. Algebraic structures are rich but
+forgeable. The SDK composes one into the other: hash first, then
+compose on the sphere.
+
+The consequence for trust: two systems that independently compose
+the same data will land on the same point on S³. They can share
+their elements and call bind() to verify the relationship. If one
+system altered its data, the element changes (SHA-256 guarantees
+this), and bind returns disordered instead of equal. The geometry
+is deterministic from the hash — you cannot produce an element
+that binds equal to another's without holding the same data.
+
+The consequence for privacy: only the element crosses the wire,
+never the data. The element is 32 bytes regardless of how many
+records were composed. A million records and a hundred records
+produce the same-sized summary. The recipient learns whether the
+data matches, not what the data is.
+
+**Non-hashed mode.** The default pipeline always applies SHA-256.
+For internal use cases where cryptographic security is not needed
+— testing, simulation, or composing pre-hashed elements — the
+Rust engine accepts raw elements directly via closure_rs. The
+SDK's Python surface (embed, Seer, Oracle, Witness) always hashes.
+The choice is at the entry point, not the algebra.
+
 ### The chaining insight (future)
 
 Each S³ composition produces a Valence output (W, RGB). Multiple
@@ -612,26 +669,40 @@ diverge and classifies each incident as missing or reorder.
 
     gilgamesh(source: list[bytes], target: list[bytes]) → list[IncidentReport]
 
-        Static mode. Both streams are complete. Three steps:
+        Static mode. Both streams are complete. Gilgamesh has the full
+        picture — he composed both sequences on S³ before walking, so
+        he knows every record's position on both sides before asking
+        the question. The inverse of Enkidu: where Enkidu discovers
+        the answer after a grace period, gilgamesh knows it immediately.
 
-        1. Compose & search — embed both sequences on S³, build both
+        1. Compose & localize — embed both sequences on S³, build both
            paths as prefix products, binary-search for the first
            divergence. O(n) embed, O(log n) search. If σ ≈ 0, the
            streams agree — return empty.
 
-        2. Narrow — two pointers walk inward from both ends, skipping
-           the matching prefix and suffix. Only the dirty region in
-           the middle needs classification.
+        2. Walk both chains — two pointers, one on each side, advance
+           in lockstep. At each step, the Hopf fiber classifies the
+           record. Three outcomes, no others:
 
-        3. Classify — walk the dirty region once. For each record,
-           counter lookup tells us if it exists on the other side.
-           Missing → report. Present at different position → reorder.
-           Paired records cancel (same element on both sides, inverse
-           via the Hopf fiber) and are removed from the counter
-           without recomposing.
+           Coheres — same payload at both pointers. Advance both.
 
-        Compose once. Search once. Walk the dirty region only.
-        O(n + log n).
+           Missing — payload at one pointer does not exist on the other
+           side. The W axis broke (existence). Flag it. Advance only
+           the pointer that has the record — the other side has no gap,
+           it just continues. This is the Enkidu move: emptiness in
+           static data collapses the chain, so one pointer falls behind.
+
+           Reorder — both payloads exist on the other side, but at
+           different positions. The RGB axis broke (position). The
+           geometry tells us which record is displaced: look up where
+           each payload actually lives on the other side and compare
+           distances. The one further from where it should be is the
+           displaced record. Flag it with its actual positions. If both
+           are equidistant, it is a swap — flag both, advance both.
+
+        Same binary question as Enkidu — existence or position — but
+        answered immediately from the composed picture. Same two types.
+        Inverse resolution strategy. O(n + log n).
 
     Enkidu()
 
@@ -692,6 +763,24 @@ The prism that splits sphere geometry into human-readable color channels.
         which positions, how far apart. This is the endpoint of the
         chain — what the application layer reads.
 
+    bind(a: NDArray, b: NDArray) → Binding
+
+        The connector. Takes two points on the ball, computes both
+        products — A · inv(B) and A · B — and determines the
+        relationship between them.
+
+        If the first product collapses to identity, the spheres are
+        equal: they represent the same composition. If the second
+        product collapses to identity, they are inverses: one is the
+        algebraic complement of the other. Otherwise the relationship
+        is disordered, and the gap's valence describes its shape.
+
+        Two systems prove they hold the same data when their spheres
+        bind equal — only elements cross the wire, never the data
+        itself. A system proves it holds another's data by producing
+        the element that binds inverse. In a pipeline, binding each
+        consecutive pair verifies the whole chain.
+
     Valence (frozen dataclass)
 
         sigma: float                    magnitude (how much)
@@ -708,6 +797,12 @@ The prism that splits sphere geometry into human-readable color channels.
         sigma: float                    divergence magnitude
         base: (float, float, float)     divergence direction (R, G, B)
         phase: float                    divergence channel (W)
+
+    Binding (frozen dataclass)
+
+        relation: str                   "equal", "inverse", or "disordered"
+        gap: Valence                    the color channels of the gap
+        sigma: float                    magnitude of the gap (0 = perfect)
 
 ### Answer formats — state.py
 
@@ -757,11 +852,13 @@ the adapter includes a signifier (sequence number, UUID) in the
 payload. This is a property of the geometry.
 
 Concretely: in stream mode, the hash-set matching stores one entry
-per payload. In static mode, gilgamesh uses set-membership for
-classification. Both are correct if the adapter enforces payload
-uniqueness. If it doesn't, identical records pair arbitrarily —
-which is mathematically correct (they are the same element) but
-may not match the application's intent.
+per payload. In static mode, gilgamesh walks both chains with two
+pointers and uses payload counters to classify each mismatch — the
+W axis (existence) tells it whether a record is missing, and the RGB
+axis (position) tells it whether a record moved. Both modes are
+correct if the adapter enforces payload uniqueness. If it doesn't,
+identical records pair arbitrarily — which is mathematically correct
+(they are the same element) but may not match the application's intent.
 
 Like two identical $20 bills — they're interchangeable. If you
 need to track which specific bill, stamp a serial number on it.
@@ -795,9 +892,16 @@ set of fields with deterministic derivation rules.
     base          (R, G, B)      divergence direction
     phase         float          divergence channel
 
+**Per-binding (two elements compared):**
+
+    relation      str            "equal", "inverse", or "disordered"
+    gap           Valence        the color channels of the gap between them
+    sigma         float          magnitude of the gap (0 = perfect match)
+
 **Derivation rules (deterministic, never configurable):**
 - axis = "existence" if either position is None, else "position"
 - displacement = |position_a - position_b| if both present, else None
 - sigma/base/phase from Hopf decomposition of the drift quaternion
+- relation = "equal" if σ(A·inv(B)) < threshold, "inverse" if σ(A·B) < threshold, else "disordered"
 
 The application layer chooses interpretation. The SDK provides structure.

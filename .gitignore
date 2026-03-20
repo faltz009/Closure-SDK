@@ -48,6 +48,7 @@
 !tests/test_hierarchy.py
 !tests/test_fast_path.py
 !tests/test_stream_monitor.py
+!tests/test_bind.py
 
 # Benchmarks and demos
 !benchmarks/
