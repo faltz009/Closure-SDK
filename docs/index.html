@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Enkidu Alive</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #111; color: #eee; font-family: monospace; padding: 20px; }
+.main { display: flex; gap: 30px; max-width: 1200px; margin: 0 auto; align-items: flex-start; }
+.sim-col { display: flex; flex-direction: column; align-items: center; }
+.explain-col { max-width: 420px; padding-top: 8px; }
+h1 { font-size: 18px; margin-bottom: 4px; }
+.sub { font-size: 11px; color: #888; margin-bottom: 12px; }
+canvas { border: 1px solid #333; cursor: crosshair; }
+.panel { display: flex; gap: 20px; margin-top: 12px; font-size: 13px; }
+.col { display: flex; flex-direction: column; gap: 4px; }
+.bar-wrap { display: flex; align-items: center; gap: 6px; width: 220px; }
+.bar-label { width: 60px; text-align: right; }
+.bar-bg { flex: 1; height: 14px; background: #222; border: 1px solid #444; }
+.bar-fill { height: 100%; transition: width 0.1s; }
+.bar-val { width: 40px; font-size: 11px; }
+.info { font-size: 12px; color: #aaa; }
+.controls { margin-top: 8px; display: flex; gap: 8px; }
+button { background: #333; color: #eee; border: 1px solid #555; padding: 4px 12px; cursor: pointer; font-family: monospace; }
+button:hover { background: #444; }
+.skill-btn { background: linear-gradient(180deg, #3a3020 0%, #2a2018 100%); border: 1px solid #a08040; color: #d4aa50; font-weight: bold; padding: 6px 16px; transition: all 0.2s; }
+.skill-btn:hover { background: linear-gradient(180deg, #4a4030 0%, #3a3028 100%); border-color: #d4aa50; color: #ffe080; box-shadow: 0 0 8px rgba(212,170,80,0.3); }
+.skill-btn.learned { background: linear-gradient(180deg, #2a3520 0%, #1a2818 100%); border-color: #60a040; color: #80c060; }
+.skill-btn.learned:hover { box-shadow: 0 0 8px rgba(96,160,64,0.3); border-color: #80c060; }
+.dead-overlay { color: #f44; font-size: 16px; font-weight: bold; margin-top: 6px; }
+.ex-title { font-size: 15px; color: #d4aa50; margin-bottom: 12px; font-weight: bold; }
+.ex-section { margin-bottom: 16px; }
+.ex-section h3 { font-size: 12px; color: #8ac; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+.ex-section p { font-size: 12px; color: #bbb; line-height: 1.6; font-family: Georgia, serif; }
+.ex-section .eq { color: #adf; font-family: monospace; font-size: 11px; background: #1a1a2a; padding: 4px 8px; display: inline-block; margin: 4px 0; border-radius: 3px; }
+.ex-map { font-size: 11px; color: #999; line-height: 1.8; }
+.ex-map span.fep { color: #8ac; }
+.ex-map span.enk { color: #d4aa50; }
+</style>
+</head>
+<body>
+
+<div class="main">
+<div class="sim-col">
+
+<h1>Enkidu Alive</h1>
+<div class="sub">Geometric attention on S&sup3; &mdash; an agent that forages, builds shelter, and survives through algebraic closure alone</div>
+<canvas id="grid" width="720" height="720"></canvas>
+
+<div class="panel">
+  <div class="col">
+    <div class="bar-wrap">
+      <span class="bar-label">Hunger</span>
+      <div class="bar-bg"><div class="bar-fill" id="hbar" style="width:0%;background:#e44;"></div></div>
+      <span class="bar-val" id="hval">0.00</span>
+    </div>
+    <div class="bar-wrap">
+      <span class="bar-label">Cold</span>
+      <div class="bar-bg"><div class="bar-fill" id="cbar" style="width:0%;background:#4ae;"></div></div>
+      <span class="bar-val" id="cval">0.00</span>
+    </div>
+  </div>
+  <div class="col">
+    <div class="info">Drive: <span id="drv">rest</span></div>
+    <div class="info">Tick: <span id="tick">0</span> | Meals: <span id="meals">0</span> | Camps: <span id="camps">0</span></div>
+    <div class="info">Pos: <span id="pos">(0,0)</span> | &sigma;: <span id="sig">0.00</span></div>
+    <div class="info">Env: <span id="env">thriving</span> | Food: <span id="fcnt">0</span></div>
+  </div>
+</div>
+
+<div class="controls">
+  <button onclick="reset()">Reset</button>
+  <button onclick="togglePause()" id="pauseBtn">Pause</button>
+  <button onclick="toggleSpeed()">Speed: <span id="spd">Normal</span></button>
+  <button onclick="spawnRandom()">Random Food</button>
+</div>
+<div class="controls" style="margin-top:4px;">
+  <button onclick="setMode('thriving')" id="btn_thriving" style="border-color:#aaa;">Thriving</button>
+  <button onclick="setMode('scarce')" id="btn_scarce">Scarce</button>
+  <button id="btn_famine" style="opacity:0.35;cursor:default;color:#666;">Famine (coming soon)</button>
+</div>
+
+<div class="controls" style="margin-top:6px;">
+  <button onclick="setTemperament('cautious')" id="tmp_cautious">Cautious</button>
+  <button onclick="setTemperament('balanced')" id="tmp_balanced" style="border-color:#aaa;">Balanced</button>
+  <button onclick="setTemperament('bold')" id="tmp_bold">Bold</button>
+  <span class="info" id="tmp_desc" style="margin-left:4px;max-width:220px;font-size:10px;">Weighs hunger and cold equally.</span>
+</div>
+<div class="controls" style="margin-top:6px;">
+  <button onclick="teachShelter()" id="btn_shelter" class="skill-btn">Teach him to build shelter</button>
+</div>
+
+<div class="dead-overlay" id="dead" style="display:none;">ENKIDU DIED &mdash; click Reset</div>
+
+<div id="eventlog" style="margin-top:8px;width:720px;height:140px;overflow-y:auto;font-size:10px;color:#666;background:#0a0a0a;border:1px solid #222;padding:4px 8px;line-height:1.5;"></div>
+
+</div><!-- sim-col -->
+
+<div class="explain-col">
+
+<div class="ex-title">A mind from geometry alone</div>
+
+<div class="ex-section">
+  <h3>The idea</h3>
+  <p>Enkidu begins at home, fed and warm, with every internal measure at zero &mdash;
+  a state we call identity. The world disturbs that balance continuously:
+  hunger accumulates with time, and cold accumulates with distance from shelter,
+  so the longer he is out and the further he roams, the larger these two
+  distances from identity grow. Because each distance points back toward
+  the thing that would resolve it &mdash; food for hunger, shelter for cold &mdash;
+  the environment itself produces a gradient simply by pulling him away
+  from equilibrium. Enkidu does not learn this gradient; he inherits it
+  from the geometry of the space he moves through.</p>
+</div>
+
+<div class="ex-section">
+  <h3>One function, all behavior</h3>
+  <p>His entire decision-making is a comparison: whichever distance is larger
+  determines the target, and he takes the step that most reduces it. When hunger
+  outweighs cold he walks toward food; when cold outweighs hunger he heads for
+  shelter. Applied tick after tick, this single comparison produces the foraging
+  trips, the direct paths home that never retrace the outbound route, the
+  hesitation when both drives are nearly equal, and the quiet rest at identity
+  once both distances fall back to zero.</p>
+</div>
+
+<div class="ex-section">
+  <h3>Tool use changes everything</h3>
+  <p>In Scarce mode, press <em>&ldquo;Teach him to build shelter&rdquo;</em> and watch what
+  happens. Whenever Enkidu finds himself too far from any existing shelter
+  he stops and builds one where he stands, creating a new point in the world
+  where cold resets to zero. Over time these camps form a network along his
+  foraging routes, extending the range he can survive &mdash; the same strategy
+  an animal uses when it chains dens across a territory.</p>
+  <table style="margin-top:10px;font-size:11px;color:#aaa;border-collapse:collapse;width:100%;">
+    <tr style="color:#666;text-transform:uppercase;font-size:9px;letter-spacing:1px;">
+      <td style="padding:3px 0;">Scarce mode</td>
+      <td style="text-align:right;padding:3px 6px;">No shelter</td>
+      <td style="text-align:right;padding:3px 6px;">With shelter</td>
+      <td style="padding:3px 6px;">Killer</td>
+    </tr>
+    <tr><td colspan="4" style="border-top:1px solid #333;"></td></tr>
+    <tr>
+      <td style="padding:3px 0;"><b style="color:#e44;">Cautious</b></td>
+      <td style="text-align:right;padding:3px 6px;">49%</td>
+      <td style="text-align:right;padding:3px 6px;color:#6c6;">100%</td>
+      <td style="padding:3px 6px;color:#e44;">hunger (72%)</td>
+    </tr>
+    <tr>
+      <td style="padding:3px 0;"><b>Balanced</b></td>
+      <td style="text-align:right;padding:3px 6px;">49%</td>
+      <td style="text-align:right;padding:3px 6px;color:#6c6;">100%</td>
+      <td style="padding:3px 6px;color:#4ae;">cold (81%)</td>
+    </tr>
+    <tr>
+      <td style="padding:3px 0;"><b style="color:#4ae;">Bold</b></td>
+      <td style="text-align:right;padding:3px 6px;">31%</td>
+      <td style="text-align:right;padding:3px 6px;color:#6c6;">90%</td>
+      <td style="padding:3px 6px;color:#4ae;">cold (100%)</td>
+    </tr>
+  </table>
+  <p style="margin-top:6px;font-size:10px;color:#666;font-style:italic;">
+  N=1500 runs, 600 ticks each. Thriving mode: 99% survival. Bold pays a 10% cost for risk-taking even with tools.</p>
+</div>
+
+<div class="ex-section">
+  <h3>Interact</h3>
+  <p style="font-size:11px;color:#aaa;line-height:1.8;">
+  <b>Click</b> the grid to drop food. Help him eat.<br>
+  <b>Shift+click</b> to place a shelter. Give him warmth.<br>
+  Or teach him to build his own and watch him survive.
+  </p>
+</div>
+
+<div class="ex-section" style="margin-top:16px; border-top: 1px solid #333; padding-top: 14px;">
+  <h3>For those familiar with the Free Energy Principle</h3>
+  <div class="ex-map">
+    <span class="fep">Generative model</span> &rarr; <span class="enk">quaternion composition on S&sup3;</span><br>
+    <span class="fep">Prior (expected state)</span> &rarr; <span class="enk">identity element = homeostasis</span><br>
+    <span class="fep">Free energy</span> &rarr; <span class="enk">geodesic distance from identity (&sigma;)</span><br>
+    <span class="fep">Variational step</span> &rarr; <span class="enk">collapses to geometry: pick the move that most reduces &sigma;</span><br>
+    <span class="fep">Precision weighting</span> &rarr; <span class="enk">larger drive selects the active channel</span><br>
+    <span class="fep">Niche construction</span> &rarr; <span class="enk">new shelter = new fixed point in state space</span><br>
+  </div>
+</div>
+
+<div class="ex-section" style="margin-top:16px; background: linear-gradient(135deg, #1a1a10 0%, #1a1510 100%); border: 1px solid #a08040; border-radius: 6px; padding: 14px;">
+  <h3 style="color:#d4aa50;">Why this matters</h3>
+  <p>A transformer learns attention through millions of parameters trained
+  on billions of tokens. Friston&rsquo;s Free Energy Principle describes
+  the same process through variational calculus. Here the algebra of
+  S&sup3; computes both directly: compose, measure distance from identity,
+  act on the largest. The environment writes the gradient by disturbing
+  equilibrium, and the geometry supplies the way home. Everything you
+  see on screen &mdash; the foraging, the hesitation, the shelters extending
+  his range &mdash; emerges from that single operation applied to a world
+  that refuses to leave him in peace.</p>
+</div>
+
+<div class="ex-section" style="margin-top:16px; border-top: 1px solid #333; padding-top: 14px;">
+  <h3 style="cursor:pointer;user-select:none;" onclick="document.getElementById('adv-panel').style.display = document.getElementById('adv-panel').style.display === 'none' ? 'block' : 'none';">Advanced &#9662;</h3>
+  <div id="adv-panel" style="display:none; margin-top:8px;">
+    <div style="display:grid; grid-template-columns: 1fr 56px; gap:4px 8px; font-size:11px; color:#aaa; align-items:center;">
+      <label>Hunger rate <span style="color:#555;">(starvation speed)</span></label>
+      <input type="number" id="knob_hr" value="0.028" step="0.005" min="0.005" max="0.2" style="width:54px;background:#1a1a1a;color:#eee;border:1px solid #444;padding:2px 4px;font-family:monospace;font-size:11px;">
+      <label>Cold rate <span style="color:#555;">(exposure speed)</span></label>
+      <input type="number" id="knob_cr" value="0.048" step="0.005" min="0.005" max="0.2" style="width:54px;background:#1a1a1a;color:#eee;border:1px solid #444;padding:2px 4px;font-family:monospace;font-size:11px;">
+      <label>Build threshold <span style="color:#555;">(steps)</span></label>
+      <input type="number" id="knob_bt" value="24" step="1" min="3" max="40" style="width:54px;background:#1a1a1a;color:#eee;border:1px solid #444;padding:2px 4px;font-family:monospace;font-size:11px;">
+      <label>Cold weight <span style="color:#555;">(drive bias)</span></label>
+      <input type="number" id="knob_cw" value="1.0" step="0.1" min="0.1" max="3.0" style="width:54px;background:#1a1a1a;color:#eee;border:1px solid #444;padding:2px 4px;font-family:monospace;font-size:11px;">
+    </div>
+    <div style="margin-top:8px; display:flex; gap:8px;">
+      <button onclick="applyKnobs()" style="font-size:10px;">Apply</button>
+      <button onclick="resetKnobs()" style="font-size:10px;">Defaults</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- explain-col -->
+</div><!-- main -->
+
+<script>
+// ============================================================
+// GEOMETRY — Clifford torus on S³
+// ============================================================
+// The grid IS S³ projected. Each (x, y) position maps to a
+// quaternion via Clifford embedding. Home = identity = (1,0,0,0).
+// σ (geodesic distance from identity) = how far from home.
+// This is NOT a metaphor — it's the actual Zeroth Law algebra.
+
+const THETA = Math.PI / 32;       // smaller step = bigger usable grid
+const HUNGER_LETHAL = Math.PI;    // hunger at π = starvation = death
+const COLD_LETHAL = Math.PI;      // cold at π = hypothermia = death
+const GRID_SIZE = 25;             // half-width of visible grid (bigger world)
+const CELL = 14;                  // pixels per grid cell (smaller to fit)
+const ORIGIN_PX = 360;            // canvas center pixel
+const SHELTER_BUILD_TICKS = 3;    // ticks to build a shelter
+
+// Map grid position → quaternion on Clifford torus
+// q = (cos a cos b, sin a cos b, cos a sin b, sin a sin b)
+function pos2quat(x, y) {
+  const a = y * THETA, b = x * THETA;
+  return [Math.cos(a)*Math.cos(b), Math.sin(a)*Math.cos(b), Math.cos(a)*Math.sin(b), Math.sin(a)*Math.sin(b)];
+}
+
+// σ = geodesic distance from identity on S³
+// This IS the "not-home" signal. σ = 0 means closure. σ > 0 means open path.
+function sigma(q) { return Math.acos(Math.min(Math.abs(q[0]), 1)); }
+
+// Manhattan distance — used for greedy navigation
+function dist(x1,y1,x2,y2) { return Math.abs(x1-x2)+Math.abs(y1-y2); }
+
+// The four cardinal moves. UP/DOWN are inverses. LEFT/RIGHT are inverses.
+// Composing all four returns to identity — this is the bracket closure.
+const MOVES = {up:[0,1], down:[0,-1], left:[-1,0], right:[1,0]};
+
+// Greedy step: pick the move that reduces Manhattan distance to target.
+// THIS IS THE ONLY MOTOR FUNCTION. Going to food and going home are
+// the same call — only the target changes.
+function bestStep(ex, ey, tx, ty) {
+  let best = null, bd = Infinity;
+  for (const [name, [dx,dy]] of Object.entries(MOVES)) {
+    const d = dist(ex+dx, ey+dy, tx, ty);
+    if (d < bd) { bd = d; best = name; }
+  }
+  return best;
+}
+
+// ============================================================
+// WORLD STATE — Enkidu's body and drives
+// ============================================================
+
+let enkidu = {x:0, y:0};    // position on the grid (home = origin)
+let hunger = 0;              // hunger scalar: 0 = fed, π = dead
+let cold = 0;                // cold scalar: 0 = warm (at shelter), rises when exposed
+let alive = true;
+let food = [];               // food sources: [[x,y], ...]
+let shelters = [[0,0]];      // shelter positions — home is the first one
+let building = 0;            // ticks remaining to finish building a shelter
+let tickCount = 0;
+let meals = 0;
+let sheltersBuilt = 0;
+let trail = [];              // breadcrumb trail for visualization
+let speed = 200;             // ms per tick
+let paused = false;
+let envMode = "thriving";    // environment mode — starts in thriving
+let deathCause = "";         // "hunger" or "cold"
+let canBuild = false;        // skill: shelter building — starts unlearned
+let coldWeight = 1.0;        // temperament: how much cold weighs in drive selection
+                             // cautious=1.5, balanced=1.0 (current), bold=0.5
+
+let HUNGER_RATE = 0.028;     // hunger increase per tick
+let COLD_RATE = 0.048;       // cold increase per tick when not at shelter
+let BUILD_THRESHOLD = 24;    // steps from shelter before building
+
+// Environment presets control auto-spawning of food.
+// chance = probability of food spawning per tick
+// range = max Manhattan distance from home for spawned food
+const ENV = {
+  thriving: { chance: 0.06, range: 8  },  // ~99% survival, foraging rhythm visible
+  scarce:   { chance: 0.08, range: 22 },  // spawns fast but capped at 2 — always something to chase
+  famine:   { chance: 0.04, range: 22 },  // needs shelters AND luck to survive
+};
+
+// ============================================================
+// HOMEOSTASIS — The core loop
+// ============================================================
+// Both drives are now symmetric accumulating scalars:
+//   hunger: rises every tick. Resets at food.
+//   cold:   rises every tick WHEN NOT AT HOME. Resets at home.
+//
+// σ (geodesic distance) is still there — it's the NAVIGATION signal.
+// But the NEED is the accumulated scalar, not the instant readout.
+// A body doesn't warm up by walking one step closer. You need shelter.
+//
+// The SAME best_step function serves both drives.
+// The drive with higher scalar wins. That's it.
+
+// σ — still used for navigation and the glow effect, not for drive strength
+function geoSigma() { return sigma(pos2quat(enkidu.x, enkidu.y)); }
+
+// Is Enkidu at ANY shelter?
+function atShelter() {
+  for (const s of shelters) {
+    if (enkidu.x === s[0] && enkidu.y === s[1]) return true;
+  }
+  return false;
+}
+
+// Find nearest shelter by Manhattan distance
+function nearestShelter() {
+  let best = null, bd = Infinity;
+  for (const s of shelters) {
+    const d = dist(enkidu.x, enkidu.y, s[0], s[1]);
+    if (d < bd) { bd = d; best = s; }
+  }
+  return best;
+}
+
+// How many steps to nearest shelter?
+function stepsToShelter() {
+  const ns = nearestShelter();
+  if (!ns) return Infinity;
+  return dist(enkidu.x, enkidu.y, ns[0], ns[1]);
+}
+
+// Should he build instead of walking?
+// Only when shelter is genuinely far — nearby he just walks.
+function shouldBuild() {
+  if (!canBuild) return false;
+  return stepsToShelter() > BUILD_THRESHOLD;
+}
+
+// Which drive is active? Whichever accumulated scalar is larger.
+function activeDrive() {
+  if (!alive) return "dead";
+  if (building > 0) return "building";                         // mid-construction
+  if (hunger > cold * coldWeight && food.length > 0) return "hunger";  // food is salient
+  if (cold > 0.01) {
+    if (shouldBuild()) return "building";                       // building is cheaper than walking
+    return "shelter";                                           // shelter is close — walk there
+  }
+  return "rest";                                                // homeostasis achieved
+}
+
+// Find nearest food by Manhattan distance
+function nearestFood() {
+  if (!food.length) return null;
+  let best = null, bd = Infinity;
+  for (const f of food) {
+    const d = dist(enkidu.x, enkidu.y, f[0], f[1]);
+    if (d < bd) { bd = d; best = f; }
+  }
+  return best;
+}
+
+// ============================================================
+// GAME LOOP — one tick of Enkidu's life
+// ============================================================
+function tick() {
+  if (!alive || paused) return;
+  tickCount++;
+
+  // Environment auto-spawns food based on mode
+  // Scarce caps at 2 auto-spawned food (player clicks are exempt)
+  const env = ENV[envMode];
+  const maxFood = envMode === "scarce" ? 2 : Infinity;
+  if (env.chance > 0 && Math.random() < env.chance && food.length < maxFood) {
+    const r = env.range;
+    let fx = Math.floor(Math.random() * (r*2+1)) - r;
+    let fy = Math.floor(Math.random() * (r*2+1)) - r;
+    if (fx !== 0 || fy !== 0) food.push([fx, fy]);
+  }
+
+  // Hunger rises every tick — the mortality clock
+  hunger = Math.min(hunger + HUNGER_RATE, HUNGER_LETHAL);
+
+  // Cold accumulates when exposed, resets at ANY shelter
+  if (atShelter()) {
+    cold = 0;                // shelter = closure on cold axis
+  } else {
+    cold = Math.min(cold + COLD_RATE, COLD_LETHAL);
+  }
+
+  // Building: check BEFORE death — if shelter finishes this tick, cold resets.
+  // He's racing the clock. The shelter completing saves him.
+  if (building > 0) {
+    building--;
+    if (building === 0) {
+      shelters.push([enkidu.x, enkidu.y]);  // new closure point created
+      cold = 0;                              // immediately sheltered — saved
+      sheltersBuilt++;
+      logEvent("Built camp at (" + enkidu.x + "," + enkidu.y + ") — new closure point", "#a84");
+    }
+    // Still check hunger death during building (he's working, not eating)
+    if (hunger >= HUNGER_LETHAL) {
+      alive = false;
+      deathCause = "starvation";
+      document.getElementById("dead").textContent = "ENKIDU STARVED \u2014 click Reset";
+      document.getElementById("dead").style.display = "block";
+    }
+    updateUI();
+    return;
+  }
+
+  // Death checks — both drives can kill
+  if (hunger >= HUNGER_LETHAL) {
+    alive = false;
+    deathCause = "starvation";
+    logEvent("Starved at (" + enkidu.x + "," + enkidu.y + ")", "#f44");
+    document.getElementById("dead").textContent = "ENKIDU STARVED \u2014 click Reset";
+    document.getElementById("dead").style.display = "block";
+    updateUI();
+    return;
+  }
+  if (cold >= COLD_LETHAL) {
+    alive = false;
+    deathCause = "hypothermia";
+    logEvent("Froze at (" + enkidu.x + "," + enkidu.y + ") — " + stepsToShelter() + " steps from shelter", "#4ae");
+    document.getElementById("dead").textContent = "ENKIDU FROZE \u2014 click Reset";
+    document.getElementById("dead").style.display = "block";
+    updateUI();
+    return;
+  }
+
+  // Drive selection: max(hunger, cold) determines target
+  const drive = activeDrive();
+  if (drive !== lastLogDrive && drive !== "rest") {
+    const msg = drive === "hunger" ? "Hungry — heading for food"
+              : drive === "shelter" ? "Cold — heading for shelter"
+              : drive === "building" ? "Too far from shelter — building camp"
+              : drive;
+    const col = drive === "hunger" ? "#e44" : drive === "shelter" ? "#4ae" : "#a84";
+    logEvent(msg, col);
+    lastLogDrive = drive;
+  } else if (drive === "rest" && lastLogDrive !== "rest") {
+    logEvent("Home. Resting.", "#555");
+    lastLogDrive = "rest";
+  }
+  let tgt = null;
+  if (drive === "hunger") tgt = nearestFood();              // walk toward food
+  else if (drive === "shelter") tgt = nearestShelter();      // walk toward nearest shelter
+  else if (drive === "building") {
+    building = SHELTER_BUILD_TICKS;   // start building — locked in place
+    updateUI();
+    return;
+  }
+
+  // Motor: one greedy step toward the active target
+  if (tgt) {
+    const move = bestStep(enkidu.x, enkidu.y, tgt[0], tgt[1]);
+    if (move) {
+      const [dx,dy] = MOVES[move];
+      trail.push([enkidu.x, enkidu.y]);
+      if (trail.length > 80) trail.shift();
+      enkidu.x += dx;
+      enkidu.y += dy;
+    }
+  }
+
+  // Eat: if Enkidu is on a food source, hunger resets to 0
+  for (let i = 0; i < food.length; i++) {
+    if (food[i][0] === enkidu.x && food[i][1] === enkidu.y) {
+      hunger = 0;           // closure on hunger axis
+      food.splice(i, 1);
+      meals++;
+      logEvent("Ate food at (" + enkidu.x + "," + enkidu.y + ")", "#4c4");
+      break;
+    }
+  }
+
+  updateUI();
+}
+
+// --- Rendering ---
+const canvas = document.getElementById("grid");
+const ctx = canvas.getContext("2d");
+
+function draw() {
+  ctx.fillStyle = "#111";
+  ctx.fillRect(0, 0, 720, 720);
+
+  // Grid dots
+  ctx.fillStyle = "#1a1a1a";
+  for (let gx = -GRID_SIZE; gx <= GRID_SIZE; gx++) {
+    for (let gy = -GRID_SIZE; gy <= GRID_SIZE; gy++) {
+      const px = ORIGIN_PX + gx * CELL;
+      const py = ORIGIN_PX - gy * CELL;
+      ctx.fillRect(px, py, 1, 1);
+    }
+  }
+
+  // Shelters — draw all of them
+  for (let si = 0; si < shelters.length; si++) {
+    const [sx, sy] = shelters[si];
+    const px = ORIGIN_PX + sx * CELL;
+    const py = ORIGIN_PX - sy * CELL;
+    const isHome = si === 0;
+
+    // Shelter glow radius
+    ctx.fillStyle = isHome ? "rgba(80,140,200,0.08)" : "rgba(200,160,60,0.08)";
+    ctx.beginPath();
+    ctx.arc(px, py, CELL * 1.5, 0, Math.PI*2);
+    ctx.fill();
+
+    // Shelter marker
+    ctx.fillStyle = isHome ? "#456" : "#a84";
+    ctx.fillRect(px-4, py-4, 8, 8);
+
+    // Label
+    ctx.fillStyle = "#888";
+    ctx.font = "8px monospace";
+    ctx.fillText(isHome ? "HOME" : "CAMP", px-10, py+14);
+  }
+
+  // Building progress indicator
+  if (building > 0) {
+    const bpx = ORIGIN_PX + enkidu.x * CELL;
+    const bpy = ORIGIN_PX - enkidu.y * CELL;
+    const progress = 1 - (building / SHELTER_BUILD_TICKS);
+    ctx.strokeStyle = "#a84";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(bpx, bpy, 12, -Math.PI/2, -Math.PI/2 + progress * Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Food
+  for (const [fx, fy] of food) {
+    const px = ORIGIN_PX + fx * CELL;
+    const py = ORIGIN_PX - fy * CELL;
+    ctx.fillStyle = "#4c4";
+    ctx.beginPath();
+    ctx.arc(px, py, 4, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Trail
+  for (let i = 0; i < trail.length; i++) {
+    const alpha = (i / trail.length) * 0.3;
+    const [tx, ty] = trail[i];
+    const px = ORIGIN_PX + tx * CELL;
+    const py = ORIGIN_PX - ty * CELL;
+    ctx.fillStyle = `rgba(100,150,255,${alpha})`;
+    ctx.fillRect(px-1, py-1, 3, 3);
+  }
+
+  // Enkidu
+  const epx = ORIGIN_PX + enkidu.x * CELL;
+  const epy = ORIGIN_PX - enkidu.y * CELL;
+
+  if (alive) {
+    // Color by hunger: white→red as hunger rises
+    const hf = hunger / HUNGER_LETHAL;
+    const r = Math.floor(100 + 155 * hf);
+    const g = Math.floor(180 * (1 - hf));
+    const b = Math.floor(255 * (1 - hf));
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    ctx.beginPath();
+    ctx.arc(epx, epy, 7, 0, Math.PI*2);
+    ctx.fill();
+
+    // Glow when near home (uses geometric σ, not cold scalar)
+    const gs = geoSigma();
+    if (gs < 0.3) {
+      ctx.strokeStyle = `rgba(100,200,255,${0.5 - gs})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(epx, epy, 10, 0, Math.PI*2);
+      ctx.stroke();
+    }
+  } else {
+    // Dead
+    ctx.fillStyle = "#f44";
+    ctx.font = "14px monospace";
+    ctx.fillText("X", epx-5, epy+5);
+  }
+
+  requestAnimationFrame(draw);
+}
+
+// --- Event log ---
+let lastLogDrive = "";
+function logEvent(msg, color) {
+  const el = document.getElementById("eventlog");
+  if (!el) return;
+  const span = document.createElement("div");
+  span.style.color = color || "#666";
+  span.textContent = "t=" + tickCount + "  " + msg;
+  el.appendChild(span);
+  el.scrollTop = el.scrollHeight;
+  // keep last 500 entries
+  while (el.children.length > 500) el.removeChild(el.firstChild);
+}
+function clearLog() {
+  const el = document.getElementById("eventlog");
+  if (el) el.innerHTML = "";
+  lastLogDrive = "";
+}
+
+function updateUI() {
+  const hpct = (hunger / HUNGER_LETHAL * 100).toFixed(0);
+  const cpct = (cold / HUNGER_LETHAL * 100).toFixed(0);
+  document.getElementById("hbar").style.width = hpct + "%";
+  document.getElementById("hval").textContent = hunger.toFixed(2);
+  document.getElementById("cbar").style.width = cpct + "%";
+  document.getElementById("cval").textContent = cold.toFixed(2);
+  document.getElementById("drv").textContent = activeDrive();
+  document.getElementById("tick").textContent = tickCount;
+  document.getElementById("meals").textContent = meals;
+  document.getElementById("camps").textContent = sheltersBuilt;
+  document.getElementById("pos").textContent = `(${enkidu.x},${enkidu.y})`;
+  document.getElementById("sig").textContent = geoSigma().toFixed(3);
+  document.getElementById("env").textContent = envMode;
+  document.getElementById("fcnt").textContent = food.length;
+
+  // Color drive label
+  const drv = document.getElementById("drv");
+  const d = activeDrive();
+  drv.style.color = d === "hunger" ? "#e44" : d === "shelter" ? "#4ae" : d === "building" ? "#a84" : d === "dead" ? "#f44" : "#888";
+}
+
+// --- Interaction ---
+canvas.addEventListener("click", (e) => {
+  if (!alive) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const gx = Math.round((mx - ORIGIN_PX) / CELL);
+  const gy = Math.round((ORIGIN_PX - my) / CELL);
+  if (Math.abs(gx) <= GRID_SIZE && Math.abs(gy) <= GRID_SIZE) {
+    if (e.shiftKey) {
+      // Shift+click: place shelter (god mode)
+      shelters.push([gx, gy]);
+    } else {
+      // Click: place food
+      food.push([gx, gy]);
+    }
+  }
+});
+
+function spawnRandom() {
+  if (!alive) return;
+  const r = ENV[envMode].range || GRID_SIZE;
+  const x = Math.floor(Math.random() * (r*2+1)) - r;
+  const y = Math.floor(Math.random() * (r*2+1)) - r;
+  if (x !== 0 || y !== 0) food.push([x, y]);
+}
+
+function reset() {
+  enkidu = {x:0, y:0};
+  hunger = 0;
+  cold = 0;
+  alive = true;
+  food = [];
+  shelters = [[0,0]];
+  building = 0;
+  tickCount = 0;
+  meals = 0;
+  sheltersBuilt = 0;
+  trail = [];
+  paused = false;
+  deathCause = "";
+  canBuild = false;
+  coldWeight = 1.0;
+  document.getElementById("dead").style.display = "none";
+  document.getElementById("pauseBtn").textContent = "Pause";
+  logEvent("Reset", "#555");
+  const btn = document.getElementById("btn_shelter");
+  btn.textContent = "Teach him to build shelter";
+  btn.classList.remove("learned");
+  setTemperament("balanced");
+  updateUI();
+}
+
+function togglePause() {
+  paused = !paused;
+  document.getElementById("pauseBtn").textContent = paused ? "Resume" : "Pause";
+}
+
+const TEMPERAMENTS = {
+  cautious: { weight: 1.5, desc: "Prioritizes safety. Stays close to shelter." },
+  balanced: { weight: 1.0, desc: "Weighs hunger and cold equally." },
+  bold:     { weight: 0.5, desc: "Prioritizes feeding. Risks the cold." },
+};
+
+function setTemperament(t) {
+  coldWeight = TEMPERAMENTS[t].weight;
+  document.getElementById("tmp_desc").textContent = TEMPERAMENTS[t].desc;
+  document.getElementById("knob_cw").value = TEMPERAMENTS[t].weight;
+  for (const k of ["cautious","balanced","bold"]) {
+    document.getElementById("tmp_" + k).style.borderColor = k === t ? "#aaa" : "#555";
+  }
+  logEvent("Temperament: " + t, "#888");
+}
+
+function applyKnobs() {
+  HUNGER_RATE = parseFloat(document.getElementById("knob_hr").value) || 0.028;
+  COLD_RATE = parseFloat(document.getElementById("knob_cr").value) || 0.048;
+  BUILD_THRESHOLD = parseInt(document.getElementById("knob_bt").value) || 16;
+  coldWeight = parseFloat(document.getElementById("knob_cw").value) || 1.0;
+  // sync temperament buttons
+  for (const k of ["cautious","balanced","bold"]) {
+    document.getElementById("tmp_" + k).style.borderColor = "#555";
+  }
+  logEvent("Knobs applied: HR=" + HUNGER_RATE + " CR=" + COLD_RATE + " BT=" + BUILD_THRESHOLD + " CW=" + coldWeight, "#888");
+}
+
+function resetKnobs() {
+  HUNGER_RATE = 0.028; COLD_RATE = 0.048; BUILD_THRESHOLD = 24; coldWeight = 1.0;
+  document.getElementById("knob_hr").value = "0.028";
+  document.getElementById("knob_cr").value = "0.048";
+  document.getElementById("knob_bt").value = "16";
+  document.getElementById("knob_cw").value = "1.0";
+  setTemperament("balanced");
+  logEvent("Knobs reset to defaults", "#888");
+}
+
+function teachShelter() {
+  if (canBuild) return;
+  canBuild = true;
+  logEvent("Learned shelter building — new closure strategy available", "#d4aa50");
+  const btn = document.getElementById("btn_shelter");
+  btn.textContent = "Shelter building \u2714";
+  btn.classList.add("learned");
+}
+
+function setMode(mode) {
+  if (mode === "famine") return;  // greyed out
+  envMode = mode;
+  for (const m of ["thriving","scarce"]) {
+    document.getElementById("btn_" + m).style.borderColor = m === mode ? "#aaa" : "#555";
+  }
+  // Reset the world when switching modes — clean slate
+  logEvent("Mode changed to " + mode, "#888");
+  enkidu = {x:0, y:0};
+  hunger = 0;
+  cold = 0;
+  alive = true;
+  food = [];
+  shelters = [[0,0]];
+  building = 0;
+  tickCount = 0;
+  meals = 0;
+  sheltersBuilt = 0;
+  trail = [];
+  paused = false;
+  deathCause = "";
+  // Keep canBuild — skills persist across mode switches
+  document.getElementById("dead").style.display = "none";
+  document.getElementById("pauseBtn").textContent = "Pause";
+  updateUI();
+}
+
+let speeds = [["Slow",400],["Normal",200],["Fast",80],["Turbo",30]];
+let si = 1;
+function toggleSpeed() {
+  si = (si + 1) % speeds.length;
+  speed = speeds[si][1];
+  document.getElementById("spd").textContent = speeds[si][0];
+  clearInterval(gameLoop);
+  gameLoop = setInterval(tick, speed);
+}
+
+// --- Start ---
+let gameLoop = setInterval(tick, speed);
+draw();
+updateUI();
+</script>
+</body>
+</html>

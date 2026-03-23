@@ -131,6 +131,10 @@
 !brahman/enkidu_alive/test_homeostasis.py
 !brahman/enkidu_alive/test_waypoints.py
 
+# GitHub Pages
+!docs/
+!docs/index.html
+
 # Screenshots
 !Enkidu-alive.png
 
