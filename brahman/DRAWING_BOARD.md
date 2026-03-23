@@ -386,20 +386,30 @@ specific numbers:
 
 ---
 
-## Recursive Enkidu
+## Recursive Enkidu — the layer architecture
 
-### The recursion
+### Silence is identity
 
-A closure element C is 4m numbers. Those numbers are data. Data
-embeds on S³. So closure elements from level N become tokens at
-level N+1.
+Silence is [1,0,0,0]. The base state. Nothing has arrived. Everything
+is a pool of missing incidents waiting to be resolved.
 
-Each level is the same operation:
+A sound arrives — a missing record resolves. Silence → sound =
+identity → departure from identity. The first Enkidu doesn't need
+to know what the sound means. It registers: something that wasn't
+there now is. Missing → resolved.
+
+A mind is centered around the self. Identity is the self. Every
+composition departs from identity and (if coherent) returns to it.
+This is what coherence IS. Not a metaphor. The geometry.
+
+### The core operation
+
+Every level is the same Enkidu:
 
 ```
 EnkiduLevel:
     input:   stream of quaternions (raw tokens or closure elements from below)
-    state:   running product C (identity initially)
+    state:   running product C = identity initially
     output:  closure elements (tokens for the next level)
 
     for each input quaternion q:
@@ -416,135 +426,194 @@ EnkiduLevel:
             if |RGB| > |W|: incident = reorder
 ```
 
-### What the levels discover
+No level needs to understand what it processes. Each Enkidu resolves
+missing/reorder at its own scale and passes closure elements upstream.
+The ear doesn't know what syllables mean. It matches them and emits.
 
-Level 0 operates on character embeddings. When a subsequence of
-characters composes to near-identity, that subsequence is a
-coherent unit — a morpheme, a word. Not defined by a dictionary.
-Defined by algebraic closure.
+### The layers of English (traced from silence to meaning)
 
-Level 1 operates on level-0 closure elements. When a subsequence
-of words composes to near-identity, that's a coherent phrase or
-clause.
+**Layer 0: Silence → Characters.**
 
-Level 2 operates on level-1 closure elements. Coherent paragraphs,
-arguments, ideas.
+Enkidu monitoring silence. A character arrives — incident. Another.
+Another. Each is a departure from identity. This Enkidu doesn't know
+language. It knows: did a symbol arrive? Was it in order? When a
+group of characters composes to closure (σ < ε), emit the closure
+element upstream. What IS that closure element? Layer 0 doesn't
+know. Layer 0 is the ear.
 
-Same Enkidu at every level. Same two failure modes. The hierarchy
-emerges from the algebra, not from architectural decisions.
+Architecture: embed network (maps 96 ASCII characters to S³) +
+2-4 attention layers (sees character context) + emission threshold.
+The sweep proved: for small vocab on adequate manifold, nn.Embedding
+suffices. For 96 tokens, the full embed network is needed.
+
+**Layer 1: Characters → Syllables/Morphemes.**
+
+Receives closure elements from Layer 0. Groups them. "un" arrives
+as a closure element. "do" arrives. They compose. Closes → emit.
+
+This is where writing systems diverge. Hebrew letters carry more
+meaning per symbol — fewer Layer 0 emissions needed before Layer 1
+gets a meaningful unit. Chinese characters map nearly directly to
+concepts. Hieroglyphs are pictures. Ancient languages are MORE
+DIRECT — phonemic writing (English, etc.) is an abstraction that
+adds layers between symbol and meaning. English needs more recursive
+levels than Chinese because its symbols are further from concepts.
+
+Architecture: input is already on S³ (closure elements from Layer 0).
+Embed step may be trivial (identity — no network). Attention layers
+required (context). Prediction head: predicts next morpheme-level
+element OR just emits closure elements upstream.
+
+**Layer 2: Morphemes → Words.**
+
+"undo" = composition of "un" + "do" at the morpheme level. This
+layer doesn't know grammar. It knows: these morphemes composed and
+closed. Emit the word-level element.
+
+On S³, "un-" should compose with "do" to produce something near
+the inverse of "do" alone. The algebra supports morphological
+structure natively. This is not something we need to engineer — it's
+what the geometry does if the embeddings are right. And the bracket
+test proved the embeddings learn to be right.
+
+**Layer 3: Words → Phrases.**
+
+"the cat" closes — determiner + noun is a coherent unit. "the sat"
+doesn't close (reorder — wrong word class). Syntax lives here. Not
+as rules. As closure. Grammatical phrases compose to near-identity.
+Ungrammatical ones don't.
+
+**Layer 4: Phrases → Sentences.**
+
+Subject-verb-object composes to closure at this level. Incomplete
+sentences are missing incidents. Word-salad is reorder.
+
+**Layer 5: Sentences → Meaning.**
+
+THIS is where "hot" and "cold" are inverses. Not at the letter
+level. Not at the word level. At the meaning level. "Hot" and
+"cold" compose to identity because they are semantic complements.
+A sentence about temperature that mentions hot creates a missing
+incident for its inverse concept.
+
+This is the key insight about language: "h" and "c" are NOT inverses.
+Letters compose into words. Words compose into meanings. The meanings
+are what contain the inverse relationships. The theory says: if the
+geometry captures compositional meaning (proven on brackets), then
+training on English text will find what English words POINT TO. The
+meanings are the geometry. The words are the surface. We WILL find
+them — not because English is special, but because the algebra
+captures what all languages point at.
+
+**Layer N: The Mind.**
+
+Identity. The self. Everything composes back here. When a human dies,
+this Enkidu suddenly has massive missing — every composition that
+included that person is now incomplete. The cascade of reorderings
+runs through every layer until coherence restores. That is grief.
+That is learning. Same algebra.
+
+### Why the layers are the same part
+
+The bracket test built one Enkidu. One level. Two tokens. Binary
+closure. It worked — 98.8% valid generation, inverses discovered.
+
+Every layer above is the same part. Same three components (embed,
+attention, head — scaled per layer). Same two failure modes (missing,
+reorder). Same identity at center. The architecture is not a stack
+of different systems. It is one system, recursively applied.
+
+The parts look different from outside because their tokens represent
+different things (characters, morphemes, words, phrases, meanings).
+But the algebra is identical. The Enkidu at Layer 5 doesn't know
+it's processing meaning. It just resolves missing/reorder on its
+inputs and emits closure elements. Meaning emerges from the
+composition, not from the component.
 
 ### Why the recursion solves the training bottleneck
 
-The TinyStories flat run threw 512 characters at a single transformer.
-Result: 16K tok/s, ~3 hours per epoch, gibberish at BPC 3.5. The
-attention computed O(T²) scores across 512 positions with m=20
-factors. The model was trying to learn character patterns, word
-structure, grammar, and narrative simultaneously in one flat pass.
+The flat TinyStories run threw 512 characters at one transformer.
+Result: 16K tok/s, ~3 hours per epoch, gibberish. The attention
+computed O(T²) across 512 positions — the model tried to learn
+characters, words, grammar, and narrative in one flat pass.
 
-The sweep shows why this fails: attention is the essential component,
-but attention cost scales as O(T²). With T=512, each attention layer
-computes 262,144 score entries per sample. With m=20 factors, that's
-5.2M geodesic dot products per layer. 6 layers = 31M per sample.
-
-The recursive architecture sidesteps this entirely:
+The recursive architecture:
 
 ```
-Flat model:        1 level  × T=512    → O(512²) = 262,144 attention scores/layer
-Recursive model:   3 levels × T≈10 each → O(10²) × 3 = 300 attention scores/layer
+Flat:        1 level  × T=512    → O(512²) = 262,144 scores/layer
+Recursive:   5 levels × T≈8 each → O(8²) × 5 = 320 scores/layer
 ```
 
-That's a ~870× reduction in attention computation. Each level
-processes SHORT sequences:
+~820× reduction. Each level processes SHORT sequences. Long-range
+structure accumulates across levels, not within them. A paragraph
+is not attention across 2000 characters — it's Layer 4 attending
+across 5-10 sentence-level closure elements.
 
-- Level 0 sees ~5–10 characters (a word-length unit)
-- Level 1 sees ~3–8 word-level closure elements (a phrase)
-- Level 2 sees a few phrase-level elements (a sentence)
+### Anti-collapse through the hierarchy
 
-Long-range structure accumulates across levels instead of within
-them. A paragraph is not modeled by attention across 2000 characters
-— it's modeled by level 2 attending across 5–10 sentence-level
-closure elements.
+The Drawing Board's S3Pure failed: σ alone lets embeddings collapse
+to identity. Cross-entropy prevents this in flat models.
 
-### The anti-collapse property of recursion
+The recursion provides its own anti-collapse: if Layer 0 embeddings
+collapse to identity, all character compositions produce the same
+closure element. All "words" become identical. Layer 1 receives a
+stream of identical tokens → high prediction loss → gradient flows
+back through the composition (differentiable: just the running
+product C at threshold crossing) → pushes Layer 0 embeddings apart.
 
-The Drawing Board's S3Pure failed because σ alone lets embeddings
-collapse to identity. Cross-entropy prevents this in the flat model.
-The recursion may provide its own anti-collapse mechanism:
-
-If characters collapse to identity at level 0, then all character
-compositions produce the same closure element (identity). All
-"words" become identical. Level 1 receives a stream of identical
-tokens. Level 1's prediction loss (cross-entropy on the next
-word-level element) is maximally high because it can't distinguish
-any input. The gradient from level 1's loss flows back through the
-composition operation (differentiable: just the running product C
-at the threshold crossing) to the character embedding table, pushing
-character embeddings apart.
-
-The hierarchy creates its own anti-collapse pressure. Degenerate
-embeddings at level 0 → degenerate tokens at level 1 → high loss
-at level 1 → gradient pushes level 0 apart.
+Degenerate Layer 0 → degenerate Layer 1 input → high Layer 1 loss →
+gradient forces Layer 0 apart. The hierarchy creates its own pressure.
 
 **Testable prediction:** Train recursive Enkidu with prediction loss
-at level 1 ONLY (no character-level cross-entropy). If level-1 loss
-alone forces character embeddings into distinct, compositionally
-meaningful positions, then the recursion IS the anti-collapse
-mechanism, and character-level cross-entropy is redundant overhead
-at level 0.
+at Layer 1 ONLY (no Layer-0 cross-entropy). If Layer-1 loss alone
+forces character embeddings into distinct, compositionally meaningful
+positions, then the recursion IS the anti-collapse mechanism, and
+Layer-0 cross-entropy is redundant.
 
-If this works, the minimum overhead at level 0 drops to: embedding
-network + attention layers + NO prediction head. Level 0 only needs
-to compose characters into closure elements for level 1. The
-prediction head is only needed at the TOP level (where generation
-targets originate) and at the BOTTOM level (where characters are
-emitted).
+### Generative recursion (top-down)
 
-### Generative recursion
+Classification recurses upward (input → layers → meaning).
+Generation recurses downward (meaning → layers → output).
 
-When Enkidu at level N has σ > 0:
+When Enkidu at Layer N has σ > 0:
 
 **Missing (W-axis):** C⁻¹ is the closure element that would
-complete the composition. Pass C⁻¹ down to level N-1 as a
-generation target. Level N-1 generates a sequence of its tokens
-whose composition approximates C⁻¹. If N-1 = 0, those tokens
-are characters. If N-1 > 0, recurse down.
+complete the composition. Pass C⁻¹ down to Layer N-1 as a
+generation target. Layer N-1 generates a sequence of its tokens
+whose composition approximates C⁻¹. If N-1 = 0, those tokens are
+characters. If N-1 > 0, recurse down.
 
-**Reorder (RGB-axis):** The existing level N-1 subsequences are
+**Reorder (RGB-axis):** The existing Layer N-1 subsequences are
 correct but misordered. The RGB displacement vector indicates
-the direction of misalignment. Permute the existing subsequences
-to minimize RGB displacement.
+the direction. Permute to minimize RGB displacement.
 
-Generation recurses downward. Classification recurses upward.
-Same algebra both directions.
+The mind (Layer N) decides what to say (a meaning-level closure
+element). Layer N-1 decomposes it into sentence-level targets.
+Layer N-2 into phrase-level. Down through words, morphemes,
+characters. Each layer generates short sequences that compose to
+the target from above.
 
-### Minimum overhead per level (revised with sweep data)
+### Overhead per level (from sweep data)
 
-The sweep proved three components are non-negotiable in a flat model.
-In the recursive architecture, the requirements differ by level:
+The sweep proved three components are necessary. In the recursive
+architecture, their requirements differ by level:
 
-**Level 0 (characters → word-level closure elements):**
-- Embedding network: REQUIRED (maps discrete tokens to S³)
-- Attention layers: REQUIRED (context mechanism — 0 layers = random)
-- Prediction head: REQUIRED for flat training, MAYBE redundant if
-  level-1 loss provides anti-collapse (see testable prediction above)
-- Training signal: cross-entropy on next character (or level-1 loss
-  flowing down — to be tested)
+**Layer 0 (raw data → S³):**
+- Embed network: REQUIRED (maps discrete characters to manifold)
+- Attention: REQUIRED (0 layers = random)
+- Head: needed for flat training; may be redundant if Layer-1
+  loss provides anti-collapse (see testable prediction)
 
-**Level 1+ (closure elements → higher closure elements):**
-- Embedding: MAYBE TRIVIAL. Input tokens are already unit quaternions
-  on (S³)^m — they're closure elements from the level below. The
-  "embedding" may be identity (no network needed). Or a small
-  network may help gradient flow even though the input is already
-  on the manifold. To be tested.
-- Attention layers: REQUIRED (same argument as level 0 — need context)
-- Prediction head: REQUIRED at the top generative level. Intermediate
-  levels may only need to emit closure elements (no prediction).
-- Training signal: cross-entropy on next closure element at that level
+**Layer 1+ (S³ → S³):**
+- Embed: POSSIBLY TRIVIAL. Input tokens are already on S³ — they're
+  closure elements from below. The embed step may be identity.
+- Attention: REQUIRED (context at every level)
+- Head: REQUIRED at top level (generation source). Intermediate
+  levels may only need to compose and emit.
 
-**The most optimistic minimum:** neural overhead exists only at the
-boundaries — level 0 (raw data → S³) and the top level (S³ → generated
-output). Everything in between is pure algebra: attention (geodesic
-dot products, no learned embed/head) + quaternion composition.
+**Minimum:** Neural overhead at Layer 0 (raw data boundary) and
+the top layer (generation output). Everything between: attention
+(geodesic dot products) + quaternion composition. Pure algebra.
 
 ---
 
