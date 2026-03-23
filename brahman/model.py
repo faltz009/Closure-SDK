@@ -1,13 +1,11 @@
-"""S³ RNN — learned embedding, quaternion hidden state, closure loss.
+"""Brahman — learned composition on S³.
 
 The model learns to map input tokens to unit quaternions on S³.
-The hidden state is a running product: C_t = C_{t-1} · g_t.
 σ = arccos(|w|) measures coherence at every step, for free.
 
-Step 1 (S3RNN): σ-only feedback.
-Step 2 (S3RNNValence): full Hopf decomposition — σ, R, G, B, W — fed
-    back to the embedding at every step. The model sees its own coherence
-    state in five channels instead of one.
+Step 1 (S3RNN): Sequential composition, σ-only feedback.
+Step 2 (S3RNNValence): Hopf decomposition (σ, R, G, B, W) fed back.
+Step 3 (S3Transformer): Parallel geodesic attention, same geometry.
 
 EOS is NOT composed into the running product. It is a prediction target
 only. The closure loss measures σ after the last bracket — the algebraic
@@ -329,6 +327,205 @@ class S3RNNValence(nn.Module):
             tokens.append(next_token)
 
             if next_token == EOS_TOKEN:
+                break
+
+        return tokens, sigmas
+
+
+# ── Step 3: S³ Transformer ──────────────────────────────────
+
+
+class S3Attention(nn.Module):
+    """Geodesic attention on S³.
+
+    Attention scores = dot product of unit quaternions (cosine of
+    geodesic distance). Small learned rotations per factor provide
+    content-dependent routing — 4×4 per factor, not d×d.
+    """
+
+    def __init__(self, m_factors=1):
+        super().__init__()
+        self.m = m_factors
+        self.q_rot = nn.Parameter(
+            torch.eye(4).unsqueeze(0).repeat(m_factors, 1, 1)
+        )
+
+    def forward(self, x, mask=None):
+        B, T, D = x.shape
+        m = self.m
+
+        x_q = x.view(B, T, m, 4)
+
+        # Content-dependent query: rotate each factor
+        q = torch.einsum('mij,btmj->btmi', self.q_rot, x_q)
+        q = F.normalize(q, dim=-1)
+
+        # Geodesic dot product per factor, averaged
+        scores = torch.einsum('bimf,bjmf->bijm', q, x_q)
+        scores = scores.mean(dim=-1)  # (B, T, T)
+
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, float('-inf'))
+
+        weights = F.softmax(scores, dim=-1)
+
+        # Aggregate in R^4, project back to S³
+        agg = torch.einsum('bij,bjd->bid', weights, x)
+        agg = agg.view(B, T, m, 4)
+        agg = F.normalize(agg, dim=-1)
+        return agg.view(B, T, D)
+
+
+class S3Block(nn.Module):
+    """Attention + quaternion composition residual.
+
+    No FFN. No layer norm. The residual is quaternion multiplication
+    (nonlinear, non-commutative). Normalization is the unit sphere
+    constraint — one normalize call, zero parameters.
+    """
+
+    def __init__(self, m_factors=1):
+        super().__init__()
+        self.attention = S3Attention(m_factors)
+        self.m = m_factors
+
+    def forward(self, x, mask=None):
+        B, T, D = x.shape
+        m = self.m
+
+        attended = self.attention(x, mask)
+
+        # Residual via quaternion composition
+        x_q = x.view(B, T, m, 4)
+        a_q = attended.view(B, T, m, 4)
+        out = F.normalize(qmul(x_q, a_q), dim=-1)
+        return out.view(B, T, D)
+
+
+class S3Transformer(nn.Module):
+    """The S³ Transformer. Step 3 of Brahman.
+
+    Same geometry as the RNN — unit quaternions on S³, closure loss,
+    σ as coherence signal. But parallel: every position attends to
+    every other via geodesic distance, not sequential composition.
+
+    The architecture replaces:
+      Q/K/V projections → geodesic dot product + tiny learned rotations
+      FFN               → quaternion composition (the residual IS the FFN)
+      Layer norm        → unit sphere constraint (free)
+      Residual addition → quaternion multiplication (nonlinear, exact)
+    """
+
+    def __init__(self, vocab_size, m_factors=1, n_layers=4,
+                 hidden=32, closure_weight=0.1, max_seq_len=64):
+        super().__init__()
+        self.m = m_factors
+        self.dim = 4 * m_factors
+        self.vocab_size = vocab_size
+        self.closure_weight = closure_weight
+
+        self.embed = nn.Sequential(
+            nn.Linear(vocab_size, hidden),
+            nn.GELU(),
+            nn.Linear(hidden, self.dim),
+        )
+        self.pos_embed = nn.Parameter(
+            torch.randn(max_seq_len, self.dim) * 0.02
+        )
+        self.blocks = nn.ModuleList([
+            S3Block(m_factors) for _ in range(n_layers)
+        ])
+        self.head = nn.Sequential(
+            nn.Linear(self.dim, hidden),
+            nn.GELU(),
+            nn.Linear(hidden, vocab_size),
+        )
+
+    def forward(self, tokens, targets=None, lengths=None):
+        B, T = tokens.shape
+        device = tokens.device
+
+        # Embed tokens to S³
+        x = F.one_hot(tokens, self.vocab_size).float()
+        x = self.embed(x)
+
+        # Positional quaternions, normalize to sphere
+        x = x + self.pos_embed[:T]
+        x = x.view(B, T, self.m, 4)
+        x = F.normalize(x, dim=-1)
+        x = x.view(B, T, self.dim)
+
+        # Causal mask — can't look ahead
+        mask = torch.tril(torch.ones(T, T, device=device)).unsqueeze(0)
+
+        for block in self.blocks:
+            x = block(x, mask)
+
+        logits = self.head(x)
+
+        # σ per position — mean across ALL S³ factors, not just the first
+        x_q = x.view(B, T, self.m, 4)
+        per_factor = torch.acos(torch.clamp(x_q[:, :, :, 0].abs(), max=1 - 1e-7))  # [B, T, m]
+        sigmas = per_factor.mean(dim=-1)  # [B, T]
+
+        # σ at last bracket position for closure loss
+        if lengths is not None:
+            idx = (lengths - 1).clamp(min=0)
+            bracket_sigma = sigmas[torch.arange(B, device=device), idx]
+        else:
+            bracket_sigma = sigmas[:, -1]
+
+        if targets is not None:
+            pred_loss = F.cross_entropy(
+                logits[:, :-1].reshape(-1, logits.size(-1)),
+                targets[:, 1:].reshape(-1),
+            )
+            closure_loss = bracket_sigma.mean()
+            total = pred_loss + self.closure_weight * closure_loss
+            return logits, total, {
+                "pred": pred_loss.item(),
+                "closure": closure_loss.item(),
+                "sigma_mean": sigmas.mean().item(),
+                "sigma_final": bracket_sigma.mean().item(),
+            }
+        return logits, sigmas
+
+    @torch.no_grad()
+    def generate(self, start_token, max_length, temperature=1.0, eos_token=None):
+        """Autoregressive generation via full re-encoding."""
+        if eos_token is None:
+            eos_token = EOS_TOKEN
+        device = next(self.parameters()).device
+        tokens = [start_token]
+        sigmas = []
+
+        for _ in range(max_length - 1):
+            tok_tensor = torch.tensor([tokens], dtype=torch.long, device=device)
+            T = tok_tensor.shape[1]
+
+            x = F.one_hot(tok_tensor, self.vocab_size).float()
+            x = self.embed(x)
+            x = x + self.pos_embed[:T]
+            x = x.view(1, T, self.m, 4)
+            x = F.normalize(x, dim=-1)
+            x = x.view(1, T, self.dim)
+
+            mask = torch.tril(torch.ones(T, T, device=device)).unsqueeze(0)
+            for block in self.blocks:
+                x = block(x, mask)
+
+            # σ from last position — average across all m factors
+            x_q = x[:, -1:].view(1, 1, self.m, 4)
+            per_factor = torch.acos(torch.clamp(x_q[:, :, :, 0].abs(), max=1 - 1e-7))
+            sigma = per_factor.mean().item()
+            sigmas.append(sigma)
+
+            logits = self.head(x[0, -1:]) / temperature
+            probs = F.softmax(logits, dim=-1)
+            next_token = torch.multinomial(probs, 1).item()
+            tokens.append(next_token)
+
+            if next_token == eos_token:
                 break
 
         return tokens, sigmas

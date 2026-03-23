@@ -20,7 +20,7 @@ import time
 import torch
 import torch.nn.functional as F
 
-from .model import S3RNN, S3RNNValence
+from .model import S3RNN, S3RNNValence, S3Transformer
 from .data import (
     VOCAB_SIZE, EOS, OPEN, CLOSE,
     make_dataset, pad_batch, corrupt, is_valid, bracket_length,
@@ -311,13 +311,17 @@ def compare(name_a, result_a, name_b, result_b):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Brahman training")
-    parser.add_argument("--step", type=int, choices=[1, 2], default=None,
-                        help="Run only step 1 or 2 (default: both)")
+    parser.add_argument("--step", type=int, choices=[1, 2, 3], default=None,
+                        help="Run only step 1, 2, or 3 (default: all)")
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--hidden", type=int, default=64)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--closure-weight", type=float, default=0.3)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--n-layers", type=int, default=4,
+                        help="Number of transformer layers (step 3)")
+    parser.add_argument("--m-factors", type=int, default=1,
+                        help="Number of S³ factors (step 3)")
     args = parser.parse_args(argv)
 
     n_train = 50_000
@@ -325,7 +329,7 @@ def main(argv=None):
 
     print()
     print("  ╔═════════════════════════════════════════════════════════════╗")
-    print("  ║  Brahman — S³ RNN bracket validation                      ║")
+    print("  ║  Brahman — S³ bracket validation                          ║")
     print("  ╚═════════════════════════════════════════════════════════════╝")
     print()
     print(f"  Vocab:            {VOCAB_SIZE} tokens — ( ) EOS")
@@ -359,8 +363,28 @@ def main(argv=None):
         )
         results["step2"] = (sep2, gen2)
 
+    if args.step is None or args.step == 3:
+        model3 = S3Transformer(
+            VOCAB_SIZE,
+            m_factors=args.m_factors,
+            n_layers=args.n_layers,
+            hidden=args.hidden,
+            closure_weight=args.closure_weight,
+        )
+        _, sep3, gen3 = train_model(
+            model3, f"Step 3 — S³ Transformer ({args.n_layers}L, m={args.m_factors})",
+            list(train_data), val_data,
+            epochs=args.epochs, lr=args.lr, seed=args.seed,
+        )
+        results["step3"] = (sep3, gen3)
+
+    # Head-to-head comparisons
     if "step1" in results and "step2" in results:
         compare("σ-only", results["step1"], "Valence", results["step2"])
+    if "step1" in results and "step3" in results:
+        compare("RNN", results["step1"], "Transformer", results["step3"])
+    if "step2" in results and "step3" in results:
+        compare("Valence RNN", results["step2"], "Transformer", results["step3"])
 
 
 if __name__ == "__main__":

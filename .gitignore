@@ -110,6 +110,13 @@
 !brahman/data.py
 !brahman/train.py
 !brahman/BRAHMAN.md
+!brahman/DRAWING_BOARD.md
+!brahman/train_pure.py
+!brahman/visual/
+!brahman/visual/data.py
+!brahman/visual/train.py
+!brahman/visual/__init__.py
+!brahman/visual/BRAHMAN_VISUAL.md
 
 # Paper
 !zeroth_law_full-1.pdf
