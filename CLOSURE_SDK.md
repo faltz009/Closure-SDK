@@ -234,8 +234,9 @@ THE CHAIN (Hopf projection → color channels)
 │
 ├── EXPOSE (public interface)            valence.py
 │   ├── expose(element)                  valence.py:103  any point → Valence
-│   ├── expose_incident(inc, drift)      valence.py:119  incident → IncidentValence
-│   └── bind(a, b)                       valence.py:164  two points → Binding
+│   ├── incident_drift(inc, src, tgt)    valence.py:147  local gap at incident position
+│   ├── expose_incident(inc, drift)      valence.py:185  incident → IncidentValence
+│   └── bind(a, b)                       valence.py:214  two points → Binding
 │                                                        equal, inverse, or disordered
 │
 └── CHANNELS                             valence.py
@@ -262,11 +263,15 @@ PIPELINE (data flows top to bottom)
         │
         ▼
     gilgamesh()  ─┐
-                     ├─ canon.py ───────────────── CANON finds each incident
-    Enkidu ┘    static (complete) or stream (online)
+    gilgamesh_   │├─ canon.py ───────────────── CANON finds each incident
+      detailed() ││   gilgamesh_detailed also returns composed paths
+    Enkidu ┘     ┘    static (complete) or stream (online)
         │
         ▼
-    expose_incident()        valence.py:119 ─────── CHAIN translates to channels
+    incident_drift()         valence.py:147 ─────── LOCAL gap at each incident
+        │
+        ▼
+    expose_incident()        valence.py:185 ─────── CHAIN translates to channels
         │
         ▼
     IncidentValence          valence.py:74 ──────── labeled W + RGB + positions + axis
@@ -282,8 +287,8 @@ FRONT DOOR
       ops.py                 the sphere's tools (6)
       lenses.py              Seer, Oracle, Witness
       state.py               answer formats (3)
-      canon.py               gilgamesh, Enkidu, IncidentReport, RetentionWindow
-      valence.py             expose, expose_incident, bind, Valence, IncidentValence, Binding
+      canon.py               gilgamesh, gilgamesh_detailed, Enkidu, IncidentReport, DetailedFaults, RetentionWindow
+      valence.py             expose, incident_drift, expose_incident, bind, Valence, IncidentValence, Binding
       hopf.py                the prism (internal, wrapped by valence)
 ```
 
@@ -704,6 +709,15 @@ diverge and classifies each incident as missing or reorder.
         answered immediately from the composed picture. Same two types.
         Inverse resolution strategy. O(n).
 
+    gilgamesh_detailed(source, target) → DetailedFaults
+
+        Same as gilgamesh(), but also returns the composed paths
+        (source_path, target_path). Use these with incident_drift()
+        to extract the local gap quaternion at each incident's
+        position, giving per-incident color instead of a single
+        global drift. DetailedFaults has .incidents (the same list
+        gilgamesh returns), .source_path, and .target_path.
+
     Enkidu()
 
         Stream mode. The online matcher. Records arrive one at a time.
@@ -756,12 +770,23 @@ The prism that splits sphere geometry into human-readable color channels.
         call it after every ingest to watch the channels evolve in real
         time, or on any diff to see what kind of divergence it is.
 
+    incident_drift(incident: IncidentReport, source_path, target_path) → NDArray
+
+        Extracts the local gap quaternion at a specific incident's
+        position. For a reorder (both positions present), this is
+        inv(source_at_i) · target_at_j — the divergence between the
+        two paths at that point. For a missing record (one position
+        None), this is the missing record's own contribution to the
+        composition. Feed the result into expose_incident for
+        per-incident color.
+
     expose_incident(incident: IncidentReport, drift: NDArray) → IncidentValence
 
         Takes a localized incident and the drift quaternion, decomposes
         into channels, and attaches structural labels: which axis broke,
         which positions, how far apart. This is the endpoint of the
-        chain — what the application layer reads.
+        chain — what the application layer reads. Use incident_drift()
+        to extract the drift quaternion from the composed paths.
 
     bind(a: NDArray, b: NDArray) → Binding
 

@@ -69,12 +69,13 @@ pip install closure-sdk
 
 That's it. Pre-built wheels for Linux, macOS, and Windows — includes the Rust engine, no toolchain required.
 
-**From source** (if you want to build it yourself):
+**From source** (requires [Rust toolchain](https://rustup.rs/) and [maturin](https://www.maturin.rs/)):
 
 ```bash
 git clone https://github.com/faltz009/Closure-SDK.git
 cd Closure-SDK
-pip install -e '.[dev]'   # requires Rust toolchain
+pip install -e '.[dev]'   # builds the Rust extension locally
+pytest tests -q           # verify everything works
 ```
 
 ## Quick start
@@ -163,9 +164,11 @@ All three accept JSONL, CSV, and plain text. `--output report.json` saves the fu
 | `Oracle` | Full composition history | The Seer said something's wrong, now find where |
 | `Witness` | Reference built from known-good data | Check new data against an established baseline |
 | `gilgamesh(src, tgt)` | Full-sequence comparator | You have both complete sequences and want every incident |
+| `gilgamesh_detailed(src, tgt)` | Full comparator + paths | Same as gilgamesh, plus the composed paths for per-incident color |
 | `Enkidu` | Streaming classifier | Records arrive live from both sides, classify as they come |
 | `bind(a, b)` | Identity check between two summaries | Confirm two systems agree without exchanging data |
 | `expose(element)` | Channel decomposition | See whether a divergence is a missing record or a reorder |
+| `incident_drift(inc, src_path, tgt_path)` | Local gap at an incident | Get the drift quaternion at a specific incident's position |
 | `RetentionWindow` | Recent-record buffer | Keep raw data around so you can investigate after drift |
 
 ### What you can do with summaries
@@ -187,6 +190,7 @@ All three accept JSONL, CSV, and plain text. `--output report.json` saves the fu
 | `CompareResult` | A drift number and a yes/no coherence flag |
 | `LocalizationResult` | The exact position where things diverged, and how many steps it took to find it |
 | `IncidentReport` | One incident — its type (missing or reorder), positions in both streams, the payload |
+| `DetailedFaults` | Incidents plus both composed paths for per-incident coloring |
 | `Valence` | The channel breakdown of any summary: magnitude, direction, existence |
 | `IncidentValence` | Channels plus context: which positions, which payload, which axis broke |
 | `Binding` | The relationship between two summaries: equal, inverse, or neither |

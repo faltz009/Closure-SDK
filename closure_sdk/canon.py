@@ -449,3 +449,60 @@ def gilgamesh(
         j += 1
 
     return faults[:max_faults]
+
+
+@dataclass(frozen=True)
+class DetailedFaults:
+    """Gilgamesh result with paths preserved for per-incident coloring.
+
+    incidents    — the same list gilgamesh() returns.
+    source_path  — GeometricPath of the source stream.
+    target_path  — GeometricPath of the target stream.
+
+    Use incident_drift() from valence.py to extract the local gap
+    quaternion at each incident's position.
+    """
+
+    incidents: list[IncidentReport]
+    source_path: object  # closure_rs.GeometricPath
+    target_path: object  # closure_rs.GeometricPath
+
+
+def gilgamesh_detailed(
+    source_records: list[bytes],
+    target_records: list[bytes],
+    *,
+    max_faults: int = 1000,
+) -> DetailedFaults:
+    """Like gilgamesh(), but also returns the composed paths.
+
+    The paths let callers compute the local drift at each incident's
+    position rather than using the global stream gap. See
+    valence.incident_drift() for the per-incident color extraction.
+    """
+    n_src = len(source_records)
+    n_tgt = len(target_records)
+
+    src_path = (
+        closure_rs.path_from_raw_bytes(GROUP_SPEC, source_records)
+        if source_records
+        else closure_rs.GeometricPath.from_elements(
+            closure_rs.sphere(), np.empty((0, 4), dtype=np.float64)
+        )
+    )
+    tgt_path = (
+        closure_rs.path_from_raw_bytes(GROUP_SPEC, target_records)
+        if target_records
+        else closure_rs.GeometricPath.from_elements(
+            closure_rs.sphere(), np.empty((0, 4), dtype=np.float64)
+        )
+    )
+
+    # Delegate the incident walk to gilgamesh() itself.
+    incidents = gilgamesh(source_records, target_records, max_faults=max_faults)
+
+    return DetailedFaults(
+        incidents=incidents,
+        source_path=src_path,
+        target_path=tgt_path,
+    )

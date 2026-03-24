@@ -11,7 +11,7 @@ import sys
 import time
 from pathlib import Path
 
-from closure_sdk import gilgamesh, Seer, expose_incident
+from closure_sdk import gilgamesh_detailed, expose_incident, incident_drift
 
 from .reader import read_file
 from .formatter import format_stdout, format_report_json
@@ -70,16 +70,21 @@ def run(args: argparse.Namespace) -> int:
     target_records = read_file(target_path, **read_kwargs)
 
     t0 = time.perf_counter()
-    incidents = gilgamesh(source_records, target_records, max_faults=args.max_faults)
+    result = gilgamesh_detailed(source_records, target_records, max_faults=args.max_faults)
     elapsed = time.perf_counter() - t0
+    incidents = result.incidents
 
     # --- report file (compute channels) ---
     report_path = None
     if args.output or incidents:
-        seer = Seer()
-        seer.ingest_many(source_records)
-        drift_elem = seer.state().element
-        valences = [expose_incident(inc, drift_elem) for inc in incidents]
+        # Per-incident color: the LOCAL gap at each incident's position
+        valences = [
+            expose_incident(
+                inc,
+                incident_drift(inc, result.source_path, result.target_path),
+            )
+            for inc in incidents
+        ]
 
         report_path = args.output
         if report_path is None and incidents:

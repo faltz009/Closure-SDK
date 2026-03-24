@@ -20,16 +20,19 @@ Lenses (observe the composition at different focal lengths):
 
 The chain (translates ball geometry into color channels):
     expose            — any point → Valence(σ, RGB, W)
-    expose_incident   — incident → IncidentValence with labels
+    incident_drift    — incident + both paths → local gap quaternion
+    expose_incident   — incident + drift → IncidentValence with labels
     bind              — two points → Binding (equal, inverse, or disordered)
     Valence           — σ + base(R,G,B) + phase(W)
     IncidentValence   — channels + positions + payload + axis
     Binding           — relation + gap valence + σ
 
 The canon (finds what broke):
-    gilgamesh         — static: compose, narrow, classify
-    Enkidu            — stream: match, wait, promote, reclassify
-    IncidentReport    — one incident: type, positions, payload
+    gilgamesh          — static: compose, narrow, classify
+    gilgamesh_detailed — static + paths: same incidents, returns paths for local coloring
+    Enkidu             — stream: match, wait, promote, reclassify
+    IncidentReport     — one incident: type, positions, payload
+    DetailedFaults     — incidents + both paths for per-incident color
 
 Answer formats:
     ClosureState       — a point on the ball
@@ -42,8 +45,8 @@ __version__ = "1.0.0"
 from .lenses import Seer, Oracle, Witness
 from .state import ClosureState, CompareResult, LocalizationResult
 from .ops import embed, compose, invert, sigma, diff, compare
-from .valence import Valence, IncidentValence, Binding, expose, expose_incident, bind
-from .canon import RetentionWindow, IncidentReport, gilgamesh, Enkidu
+from .valence import Valence, IncidentValence, Binding, expose, expose_incident, incident_drift, bind
+from .canon import RetentionWindow, IncidentReport, DetailedFaults, gilgamesh, gilgamesh_detailed, Enkidu
 
 __all__ = [
     # Primitives
@@ -64,6 +67,8 @@ __all__ = [
     "LocalizationResult",
     # Canon
     "gilgamesh",
+    "gilgamesh_detailed",
+    "DetailedFaults",
     "Enkidu",
     "IncidentReport",
     "RetentionWindow",
@@ -73,5 +78,6 @@ __all__ = [
     "Binding",
     "expose",
     "expose_incident",
+    "incident_drift",
     "bind",
 ]

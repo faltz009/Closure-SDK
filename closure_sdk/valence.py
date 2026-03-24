@@ -3,11 +3,17 @@
 The ball holds full-color quaternions. This module is the prism that
 splits them into human-readable channels using the Hopf fibration.
 
-Three operations:
+Four operations:
 
     expose(element)              — any point on the ball → Valence.
                                    Works at every step of composition,
                                    not just at incident time.
+
+    incident_drift(inc, src, tgt) — the local gap at a specific incident.
+                                   Takes the incident and both composed
+                                   paths, returns the drift quaternion at
+                                   that position. Feed this into
+                                   expose_incident for per-incident color.
 
     expose_incident(inc, drift)  — a localized incident → IncidentValence.
                                    Same channels, plus structural labels:
@@ -142,6 +148,50 @@ def expose_incident(incident: IncidentReport, drift_element: NDArray[np.float64]
         base=tuple(float(x) for x in hopf["base"]),
         phase=float(hopf["phase"]),
     )
+
+
+def incident_drift(
+    incident: IncidentReport,
+    source_path,
+    target_path,
+) -> NDArray[np.float64]:
+    """Extract the local gap quaternion at an incident's position.
+
+    For a reorder incident (both positions present), the drift is
+    the divergence between the two paths at the incident's source
+    position: inv(source_composition_at_i) · target_composition_at_i.
+
+    For a missing incident (one position is None), the drift is the
+    embedding of the missing record composed with the inverse of the
+    path at the present position — what the gap looks like from the
+    side that has the record.
+
+    Returns a raw quaternion suitable for expose() or expose_incident().
+    """
+    si = incident.source_index
+    ti = incident.target_index
+
+    if si is not None and ti is not None:
+        # Reorder: both sides present. Local gap at the source position.
+        src_at = np.array(source_path.running_product(si + 1))
+        tgt_at = np.array(target_path.running_product(ti + 1))
+        gap = _SPHERE.compose(_SPHERE.inverse(src_at), tgt_at)
+        return np.array(gap, dtype=np.float64)
+
+    elif si is not None:
+        # Missing from target. Use source composition at that point.
+        src_at = np.array(source_path.running_product(si + 1))
+        src_before = np.array(source_path.running_product(si))
+        # The missing record's own contribution = inv(before) · at
+        record_contrib = _SPHERE.compose(_SPHERE.inverse(src_before), src_at)
+        return np.array(record_contrib, dtype=np.float64)
+
+    else:
+        # Missing from source. Use target composition at that point.
+        tgt_at = np.array(target_path.running_product(ti + 1))
+        tgt_before = np.array(target_path.running_product(ti))
+        record_contrib = _SPHERE.compose(_SPHERE.inverse(tgt_before), tgt_at)
+        return np.array(record_contrib, dtype=np.float64)
 
 
 @dataclass(frozen=True)

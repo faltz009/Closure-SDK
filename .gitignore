@@ -28,10 +28,10 @@
 !closure_sdk/valence.py
 !closure_sdk/hopf.py
 
-# Compiled extension
+# Compiled extension (shim only — .so is built locally by pip install)
 !closure_rs/
 !closure_rs/__init__.py
-!closure_rs/*.so
+closure_rs/*.so
 
 # Rust source
 !rust/

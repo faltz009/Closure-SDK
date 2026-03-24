@@ -167,6 +167,70 @@ def test_expose_incident_returns_incident_valence() -> None:
     assert isinstance(iv.sigma, float)
 
 
+def test_gilgamesh_detailed_returns_paths_and_incidents() -> None:
+    src = [b"a", b"b", b"c", b"d"]
+    tgt = [b"a", b"c", b"b"]  # reorder b/c, missing d
+
+    result = closure.gilgamesh_detailed(src, tgt)
+    assert isinstance(result, closure.DetailedFaults)
+    assert len(result.incidents) >= 2
+    assert result.source_path is not None
+    assert result.target_path is not None
+
+    # Old gilgamesh returns the same incidents
+    old = closure.gilgamesh(src, tgt)
+    assert len(result.incidents) == len(old)
+    for new_inc, old_inc in zip(result.incidents, old):
+        assert new_inc.incident_type == old_inc.incident_type
+        assert new_inc.record == old_inc.record
+
+
+def test_incident_drift_gives_per_incident_color() -> None:
+    src = [b"x", b"y", b"z", b"w"]
+    tgt = [b"x", b"z", b"y"]  # reorder y/z, missing w
+
+    result = closure.gilgamesh_detailed(src, tgt)
+    assert len(result.incidents) >= 2
+
+    drifts = [
+        closure.incident_drift(inc, result.source_path, result.target_path)
+        for inc in result.incidents
+    ]
+
+    # Each incident should produce a valid quaternion
+    import numpy as np
+    for d in drifts:
+        assert d.shape == (4,)
+        assert abs(np.linalg.norm(d) - 1.0) < 1e-6  # unit quaternion
+
+    # Different incidents should have different drift quaternions
+    if len(drifts) >= 2:
+        assert not np.allclose(drifts[0], drifts[1])
+
+
+def test_incident_drift_with_expose_incident() -> None:
+    src = [b"p", b"q", b"r"]
+    tgt = [b"p", b"r"]  # q missing
+
+    result = closure.gilgamesh_detailed(src, tgt)
+    assert len(result.incidents) >= 1
+
+    for inc in result.incidents:
+        drift = closure.incident_drift(inc, result.source_path, result.target_path)
+        iv = closure.expose_incident(inc, drift)
+        assert isinstance(iv, closure.IncidentValence)
+        assert iv.axis in ("existence", "position")
+        assert isinstance(iv.sigma, float)
+        assert iv.sigma > 0  # there IS a divergence
+
+
+def test_gilgamesh_detailed_coherent_returns_empty() -> None:
+    records = [b"a", b"b", b"c"]
+    result = closure.gilgamesh_detailed(records, records)
+    assert isinstance(result, closure.DetailedFaults)
+    assert len(result.incidents) == 0
+
+
 def test_oracle_localize_coherent_returns_none() -> None:
     records = [b"a", b"b", b"c"]
     ref = closure.Oracle.from_records(records)
