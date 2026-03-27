@@ -797,6 +797,441 @@ fn closure_element_from_elements<'py>(
     Ok(PyArray1::from_vec(py, result))
 }
 
+/// Curriculum vote collection for m-factor teaching on S³.
+///
+/// Takes a (V × dim) embedding table and a list of n-gram index sequences.
+/// For each n-gram, composes all context words (all except the last),
+/// inverts the context, and adds it as a vote for the last word's position.
+///
+/// Returns (vote_sums, vote_counts): a (V × dim) array of accumulated
+/// inverse-context votes, and a (V,) array of how many votes each word got.
+///
+/// The m-factor structure (e.g. m=2+2 → dim=16) is handled by composing
+/// 4 independent S³ factors, each 4 floats wide.
+///
+/// This replaces the Python n-gram loop that was the teaching bottleneck.
+#[pyfunction]
+#[pyo3(signature = (embeddings, ngrams, n_factors))]
+fn curriculum_votes<'py>(
+    py: Python<'py>,
+    embeddings: PyReadonlyArray2<f64>,
+    ngrams: Vec<Vec<usize>>,
+    n_factors: usize,
+) -> PyResult<(Bound<'py, numpy::PyArray2<f64>>, Bound<'py, PyArray1<f64>>)> {
+    let emb_data = as_contiguous_slice_2d(&embeddings, "embeddings")?;
+    let shape = embeddings.shape();
+    let v = shape[0];
+    let dim = shape[1];
+
+    if dim != n_factors * 4 {
+        return Err(PyValueError::new_err(format!(
+            "embeddings dim {} != n_factors {} * 4",
+            dim, n_factors
+        )));
+    }
+
+    let sphere = SphereGroup;
+    let mut vote_sums = vec![0.0f64; v * dim];
+    let mut vote_counts = vec![0.0f64; v];
+
+    // Scratch space for composition
+    let mut context = vec![0.0f64; dim];
+    let mut temp = vec![0.0f64; 4];
+
+    for ng in &ngrams {
+        if ng.len() < 2 {
+            continue;
+        }
+
+        let target_idx = ng[ng.len() - 1];
+        if target_idx >= v {
+            continue;
+        }
+
+        // Initialize context to identity on each factor
+        for f in 0..n_factors {
+            let s = f * 4;
+            context[s] = 1.0;
+            context[s + 1] = 0.0;
+            context[s + 2] = 0.0;
+            context[s + 3] = 0.0;
+        }
+
+        // Compose context words (all except last)
+        for &word_idx in &ng[..ng.len() - 1] {
+            if word_idx >= v {
+                continue;
+            }
+            let word_offset = word_idx * dim;
+            for f in 0..n_factors {
+                let s = f * 4;
+                sphere.compose_into(
+                    &context[s..s + 4],
+                    &emb_data[word_offset + s..word_offset + s + 4],
+                    &mut temp,
+                );
+                context[s..s + 4].copy_from_slice(&temp);
+            }
+        }
+
+        // Invert context and accumulate as vote
+        let vote_offset = target_idx * dim;
+        for f in 0..n_factors {
+            let s = f * 4;
+            vote_sums[vote_offset + s] += context[s];       // w stays
+            vote_sums[vote_offset + s + 1] -= context[s + 1]; // x flips
+            vote_sums[vote_offset + s + 2] -= context[s + 2]; // y flips
+            vote_sums[vote_offset + s + 3] -= context[s + 3]; // z flips
+        }
+        vote_counts[target_idx] += 1.0;
+    }
+
+    let sums = numpy::PyArray2::from_vec2(
+        py,
+        &vote_sums
+            .chunks(dim)
+            .map(|c| c.to_vec())
+            .collect::<Vec<_>>(),
+    )?;
+    let counts = PyArray1::from_vec(py, vote_counts);
+
+    Ok((sums, counts))
+}
+
+/// Weighted curriculum votes — same as curriculum_votes but each context
+/// word's vote is scaled by its information content weight.
+///
+/// Rare content words steer stronger. Common function words steer weaker.
+/// This should spread positions away from the pole because the dominant
+/// votes come from distinctive directions, not identity-hugging function words.
+#[pyfunction]
+#[pyo3(signature = (embeddings, ngrams, n_factors, weights))]
+fn curriculum_votes_weighted<'py>(
+    py: Python<'py>,
+    embeddings: PyReadonlyArray2<f64>,
+    ngrams: Vec<Vec<usize>>,
+    n_factors: usize,
+    weights: PyReadonlyArray1<f64>,
+) -> PyResult<(Bound<'py, numpy::PyArray2<f64>>, Bound<'py, PyArray1<f64>>)> {
+    let emb_data = as_contiguous_slice_2d(&embeddings, "embeddings")?;
+    let w_data = as_contiguous_slice_1d(&weights, "weights")?;
+    let shape = embeddings.shape();
+    let v = shape[0];
+    let dim = shape[1];
+
+    if dim != n_factors * 4 {
+        return Err(PyValueError::new_err(format!(
+            "embeddings dim {} != n_factors {} * 4", dim, n_factors
+        )));
+    }
+    if w_data.len() != v {
+        return Err(PyValueError::new_err(format!(
+            "weights len {} != vocab size {}", w_data.len(), v
+        )));
+    }
+
+    let sphere = SphereGroup;
+    let mut vote_sums = vec![0.0f64; v * dim];
+    let mut vote_counts = vec![0.0f64; v];
+    let mut context = vec![0.0f64; dim];
+    let mut temp = vec![0.0f64; 4];
+
+    for ng in &ngrams {
+        if ng.len() < 2 { continue; }
+        let target_idx = ng[ng.len() - 1];
+        if target_idx >= v { continue; }
+
+        // Identity init
+        for f in 0..n_factors {
+            let s = f * 4;
+            context[s] = 1.0;
+            context[s+1] = 0.0;
+            context[s+2] = 0.0;
+            context[s+3] = 0.0;
+        }
+
+        // Compose context words
+        // Track total weight of context for normalization
+        let mut total_weight = 0.0f64;
+        for &word_idx in &ng[..ng.len() - 1] {
+            if word_idx >= v { continue; }
+            let word_offset = word_idx * dim;
+            for f in 0..n_factors {
+                let s = f * 4;
+                sphere.compose_into(
+                    &context[s..s+4],
+                    &emb_data[word_offset + s..word_offset + s + 4],
+                    &mut temp,
+                );
+                context[s..s+4].copy_from_slice(&temp);
+            }
+            total_weight += w_data[word_idx];
+        }
+
+        // Weight = average info content of context words
+        let vote_weight = if ng.len() > 2 {
+            total_weight / (ng.len() - 1) as f64
+        } else {
+            w_data[ng[0]]
+        };
+
+        // Invert and accumulate weighted vote
+        let vote_offset = target_idx * dim;
+        for f in 0..n_factors {
+            let s = f * 4;
+            vote_sums[vote_offset + s]     += vote_weight * context[s];
+            vote_sums[vote_offset + s + 1] -= vote_weight * context[s + 1];
+            vote_sums[vote_offset + s + 2] -= vote_weight * context[s + 2];
+            vote_sums[vote_offset + s + 3] -= vote_weight * context[s + 3];
+        }
+        vote_counts[target_idx] += vote_weight;
+    }
+
+    let sums = numpy::PyArray2::from_vec2(
+        py,
+        &vote_sums.chunks(dim).map(|c| c.to_vec()).collect::<Vec<_>>(),
+    )?;
+    let counts = PyArray1::from_vec(py, vote_counts);
+    Ok((sums, counts))
+}
+
+/// Refinement vote collection: progressive composition within sentences.
+///
+/// For each sentence [w0, w1, w2, ...], composes progressively:
+///   context=[w0]         → vote for w1
+///   context=[w0,w1]      → vote for w2
+///   context=[w0,w1,w2]   → vote for w3
+///   etc.
+///
+/// This avoids building millions of Python n-gram lists.
+/// All composition happens in Rust.
+#[pyfunction]
+#[pyo3(signature = (embeddings, sentences, n_factors))]
+fn refinement_votes<'py>(
+    py: Python<'py>,
+    embeddings: PyReadonlyArray2<f64>,
+    sentences: Vec<Vec<usize>>,
+    n_factors: usize,
+) -> PyResult<(Bound<'py, numpy::PyArray2<f64>>, Bound<'py, PyArray1<f64>>)> {
+    let emb_data = as_contiguous_slice_2d(&embeddings, "embeddings")?;
+    let shape = embeddings.shape();
+    let v = shape[0];
+    let dim = shape[1];
+
+    if dim != n_factors * 4 {
+        return Err(PyValueError::new_err(format!(
+            "embeddings dim {} != n_factors {} * 4",
+            dim, n_factors
+        )));
+    }
+
+    let sphere = SphereGroup;
+    let mut vote_sums = vec![0.0f64; v * dim];
+    let mut vote_counts = vec![0.0f64; v];
+    let mut context = vec![0.0f64; dim];
+    let mut temp = vec![0.0f64; 4];
+
+    for sent in &sentences {
+        if sent.len() < 2 {
+            continue;
+        }
+
+        // Reset context to identity
+        for f in 0..n_factors {
+            let s = f * 4;
+            context[s] = 1.0;
+            context[s + 1] = 0.0;
+            context[s + 2] = 0.0;
+            context[s + 3] = 0.0;
+        }
+
+        // Progressive composition through the sentence
+        for t in 0..sent.len() - 1 {
+            let word_idx = sent[t];
+            if word_idx >= v {
+                continue;
+            }
+
+            // Compose word into running context
+            let word_offset = word_idx * dim;
+            for f in 0..n_factors {
+                let s = f * 4;
+                sphere.compose_into(
+                    &context[s..s + 4],
+                    &emb_data[word_offset + s..word_offset + s + 4],
+                    &mut temp,
+                );
+                context[s..s + 4].copy_from_slice(&temp);
+            }
+
+            // Vote: next word should be near context⁻¹
+            let target_idx = sent[t + 1];
+            if target_idx >= v {
+                continue;
+            }
+            let vote_offset = target_idx * dim;
+            for f in 0..n_factors {
+                let s = f * 4;
+                vote_sums[vote_offset + s] += context[s];
+                vote_sums[vote_offset + s + 1] -= context[s + 1];
+                vote_sums[vote_offset + s + 2] -= context[s + 2];
+                vote_sums[vote_offset + s + 3] -= context[s + 3];
+            }
+            vote_counts[target_idx] += 1.0;
+        }
+    }
+
+    let sums = numpy::PyArray2::from_vec2(
+        py,
+        &vote_sums
+            .chunks(dim)
+            .map(|c| c.to_vec())
+            .collect::<Vec<_>>(),
+    )?;
+    let counts = PyArray1::from_vec(py, vote_counts);
+
+    Ok((sums, counts))
+}
+
+/// Score all vocabulary words against a target quaternion.
+///
+/// For each word in the (V × dim) embedding table, computes the
+/// average dot product across all m factors between the target
+/// and the word's quaternion. Returns a (V,) array of scores.
+///
+/// This replaces the Python loop:
+///   dots = [mf_dot(target, full[i]) for i in range(V)]
+/// which is the generation/babbling bottleneck at 21K+ words.
+#[pyfunction]
+#[pyo3(signature = (target, embeddings, n_factors))]
+fn score_vocabulary<'py>(
+    py: Python<'py>,
+    target: PyReadonlyArray1<f64>,
+    embeddings: PyReadonlyArray2<f64>,
+    n_factors: usize,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    let tgt = as_contiguous_slice_1d(&target, "target")?;
+    let emb_data = as_contiguous_slice_2d(&embeddings, "embeddings")?;
+    let shape = embeddings.shape();
+    let v = shape[0];
+    let dim = shape[1];
+
+    if dim != n_factors * 4 {
+        return Err(PyValueError::new_err(format!(
+            "embeddings dim {} != n_factors {} * 4", dim, n_factors
+        )));
+    }
+    if tgt.len() != dim {
+        return Err(PyValueError::new_err(format!(
+            "target len {} != dim {}", tgt.len(), dim
+        )));
+    }
+
+    let mut scores = vec![0.0f64; v];
+
+    for i in 0..v {
+        let word_offset = i * dim;
+        let mut total_dot = 0.0;
+        for f in 0..n_factors {
+            let s = f * 4;
+            total_dot += tgt[s]     * emb_data[word_offset + s]
+                       + tgt[s + 1] * emb_data[word_offset + s + 1]
+                       + tgt[s + 2] * emb_data[word_offset + s + 2]
+                       + tgt[s + 3] * emb_data[word_offset + s + 3];
+        }
+        scores[i] = total_dot / n_factors as f64;
+    }
+
+    Ok(PyArray1::from_vec(py, scores))
+}
+
+/// Collect follower statistics at multiple timescales in a single pass.
+///
+/// For each sentence, extracts what follows each word/phrase at different
+/// window sizes. Returns a dict mapping window_size → {word_idx → [(follower_idx, count)]}.
+///
+/// Window 2 (bigrams): what single word follows this word?
+/// Window 4: what word follows this 3-word phrase?
+/// Window 8: what word follows this 7-word phrase?
+///
+/// Each Enkidu cell level uses followers at its own timescale:
+/// - Word cell uses window=2 (bigram followers)
+/// - Phrase cell uses window=4
+/// - Sentence cell uses window=8
+///
+/// This enables dynamic Enkidu spawning: more context words in the prompt
+/// activate higher-level cells that use wider-window followers.
+#[pyfunction]
+#[pyo3(signature = (sentences, vocab_size, windows, top_k = 50))]
+fn collect_followers_multi<'py>(
+    py: Python<'py>,
+    sentences: Vec<Vec<usize>>,
+    vocab_size: usize,
+    windows: Vec<usize>,
+    top_k: usize,
+) -> PyResult<Bound<'py, pyo3::types::PyDict>> {
+    use std::collections::HashMap;
+
+    // For each window size, collect follower counts per word
+    // Key: (window_size, context_last_word) → HashMap<follower, count>
+    let mut tables: HashMap<usize, Vec<HashMap<usize, u32>>> = HashMap::new();
+    for &w in &windows {
+        let mut t = Vec::with_capacity(vocab_size);
+        for _ in 0..vocab_size {
+            t.push(HashMap::new());
+        }
+        tables.insert(w, t);
+    }
+
+    for sent in &sentences {
+        if sent.len() < 2 {
+            continue;
+        }
+        for &w in &windows {
+            if sent.len() < w {
+                continue;
+            }
+            for i in 0..sent.len() - w + 1 {
+                // The context is sent[i..i+w-1], the follower is sent[i+w-1]
+                // Key the followers by the LAST word of the context
+                // (the word just before the follower)
+                let key_word = sent[i + w - 2]; // last context word
+                let follower = sent[i + w - 1]; // the word that follows
+                if key_word < vocab_size && follower < vocab_size {
+                    if let Some(table) = tables.get_mut(&w) {
+                        *table[key_word].entry(follower).or_insert(0) += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    // Convert to Python: dict of window → list of (word_idx → top_k followers)
+    let result = pyo3::types::PyDict::new(py);
+    for &w in &windows {
+        if let Some(table) = tables.get(&w) {
+            // For each word, sort followers by count and keep top_k
+            let word_followers = pyo3::types::PyDict::new(py);
+            for (word_idx, followers) in table.iter().enumerate() {
+                if followers.is_empty() {
+                    continue;
+                }
+                let mut sorted: Vec<(usize, u32)> = followers.iter()
+                    .map(|(&k, &v)| (k, v))
+                    .collect();
+                sorted.sort_by(|a, b| b.1.cmp(&a.1));
+                sorted.truncate(top_k);
+
+                let py_list: Vec<(usize, u32)> = sorted;
+                word_followers.set_item(word_idx, py_list)?;
+            }
+            result.set_item(w, word_followers)?;
+        }
+    }
+
+    Ok(result)
+}
+
 /// Build metadata — confirms which .so Python actually loaded.
 /// Returns (manifest_dir, version).
 #[pyfunction]
@@ -816,6 +1251,11 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(path_from_raw_bytes, m)?)?;
     m.add_function(wrap_pyfunction!(closure_element_from_raw_bytes, m)?)?;
     m.add_function(wrap_pyfunction!(closure_element_from_elements, m)?)?;
+    m.add_function(wrap_pyfunction!(curriculum_votes, m)?)?;
+    m.add_function(wrap_pyfunction!(curriculum_votes_weighted, m)?)?;
+    m.add_function(wrap_pyfunction!(refinement_votes, m)?)?;
+    m.add_function(wrap_pyfunction!(score_vocabulary, m)?)?;
+    m.add_function(wrap_pyfunction!(collect_followers_multi, m)?)?;
     m.add_function(wrap_pyfunction!(build_info, m)?)?;
     m.add_class::<PyGroup>()?;
     m.add_class::<PyGeometricPath>()?;

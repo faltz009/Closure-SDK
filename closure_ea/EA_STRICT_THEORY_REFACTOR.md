@@ -86,9 +86,17 @@ It:
 
 ## Remaining work
 
-1. Add direct adapter decode paths so prediction can become substrate output without falling back to retrieval.
+1. Add direct adapter decode paths so prediction can become substrate output without falling back to retrieval. The Rust `score_vocabulary` function already does this — it scores all genome positions against a target quaternion. This needs to be wired as `adapter.decode(prediction)` in Trinity.
+
 2. Decide whether memory storage should remain adapter-backed or move into a stricter Trinity-owned structure. Right now the timing logic is in Trinity but the stored positions still live in `adapter.genome`.
-3. Rewrite the walking track on Trinity.
+
+3. Information-weighted scope consolidation. Trinity's `_consolidate_scope` currently gives equal weight to every tick's error. The old curriculum approach weighted rare events stronger to prevent high-frequency patterns from pulling everything toward identity (pole collapse). The same weighting should apply when composing scope error before writing to S3.
+
+4. Multi-scale prediction consumption. The lattice hierarchy already produces predictions at every level (level 0 = local, level 1+ = larger scopes). Currently only level 0's prediction is compared against reality. Higher-level predictions should bias the scope correction or the decode selection.
+
+5. Batch pre-training path. Trinity's online buffer-compare loop is the right architecture for learning, but for large corpora the Rust batch functions (`curriculum_votes`, `refinement_votes`) can initialize the genome orders of magnitude faster. These should become Trinity's pre-training pass — same algebra, batch-parallelized, before the online loop refines through prediction error.
+
+6. Rewrite the walking track on Trinity.
 
 Note: the Mirror (`mirror.py`) is NOT a separate step.  S2 IS the evaluator.  S2's hierarchy at higher levels IS the self-model — patterns in the system's own evaluations emerge from S2's closure cadence at level 1+.  A separate mirror class is redundant when S2 is a full Lattice.
 
