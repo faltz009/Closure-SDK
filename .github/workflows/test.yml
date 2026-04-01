@@ -31,7 +31,7 @@ jobs:
           rm -f closure_rs/closure_rs*.so
           python -m venv .venv
           source .venv/bin/activate
-          pip install maturin numpy pytest pytest-cov
+          pip install maturin numpy pytest pytest-cov sqlglot
           maturin develop --manifest-path rust/Cargo.toml
           # Copy freshly built .so into closure_rs/ where the shim expects it
           cp .venv/lib/python${{ matrix.python-version }}/site-packages/closure_rs/closure_rs*.so closure_rs/
@@ -41,7 +41,7 @@ jobs:
       - name: Run tests
         run: |
           source .venv/bin/activate
-          pytest tests/ -q --tb=short
+          pytest -q --tb=short
         env:
           PYTHONNOUSERSITE: "1"
 
@@ -49,6 +49,6 @@ jobs:
         if: matrix.python-version == '3.13'
         run: |
           source .venv/bin/activate
-          pytest tests/ --cov=closure_sdk --cov-report=term-missing -q
+          pytest --cov=closure_sdk --cov=closure_ea.dna --cov-report=term-missing -q
         env:
           PYTHONNOUSERSITE: "1"
