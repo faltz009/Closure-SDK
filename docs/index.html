@@ -1,763 +1,135 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<title>Enkidu Alive</title>
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #111; color: #eee; font-family: monospace; padding: 20px; }
-.main { display: flex; gap: 30px; max-width: 1200px; margin: 0 auto; align-items: flex-start; }
-.sim-col { display: flex; flex-direction: column; align-items: center; }
-.explain-col { max-width: 420px; padding-top: 8px; }
-h1 { font-size: 18px; margin-bottom: 4px; }
-.sub { font-size: 11px; color: #888; margin-bottom: 12px; }
-canvas { border: 1px solid #333; cursor: crosshair; }
-.panel { display: flex; gap: 20px; margin-top: 12px; font-size: 13px; }
-.col { display: flex; flex-direction: column; gap: 4px; }
-.bar-wrap { display: flex; align-items: center; gap: 6px; width: 220px; }
-.bar-label { width: 60px; text-align: right; }
-.bar-bg { flex: 1; height: 14px; background: #222; border: 1px solid #444; }
-.bar-fill { height: 100%; transition: width 0.1s; }
-.bar-val { width: 40px; font-size: 11px; }
-.info { font-size: 12px; color: #aaa; }
-.controls { margin-top: 8px; display: flex; gap: 8px; }
-button { background: #333; color: #eee; border: 1px solid #555; padding: 4px 12px; cursor: pointer; font-family: monospace; }
-button:hover { background: #444; }
-.skill-btn { background: linear-gradient(180deg, #3a3020 0%, #2a2018 100%); border: 1px solid #a08040; color: #d4aa50; font-weight: bold; padding: 6px 16px; transition: all 0.2s; }
-.skill-btn:hover { background: linear-gradient(180deg, #4a4030 0%, #3a3028 100%); border-color: #d4aa50; color: #ffe080; box-shadow: 0 0 8px rgba(212,170,80,0.3); }
-.skill-btn.learned { background: linear-gradient(180deg, #2a3520 0%, #1a2818 100%); border-color: #60a040; color: #80c060; }
-.skill-btn.learned:hover { box-shadow: 0 0 8px rgba(96,160,64,0.3); border-color: #80c060; }
-.dead-overlay { color: #f44; font-size: 16px; font-weight: bold; margin-top: 6px; }
-.ex-title { font-size: 15px; color: #d4aa50; margin-bottom: 12px; font-weight: bold; }
-.ex-section { margin-bottom: 16px; }
-.ex-section h3 { font-size: 12px; color: #8ac; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
-.ex-section p { font-size: 12px; color: #bbb; line-height: 1.6; font-family: Georgia, serif; }
-.ex-section .eq { color: #adf; font-family: monospace; font-size: 11px; background: #1a1a2a; padding: 4px 8px; display: inline-block; margin: 4px 0; border-radius: 3px; }
-.ex-map { font-size: 11px; color: #999; line-height: 1.8; }
-.ex-map span.fep { color: #8ac; }
-.ex-map span.enk { color: #d4aa50; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Closure</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
-<body>
+<body class="has-ribbon">
 
-<div class="main">
-<div class="sim-col">
+<div id="ribbon-bg"></div>
 
-<h1>Enkidu Alive</h1>
-<div class="sub">Geometric attention on S&sup3; &mdash; an agent that forages, builds shelter, and survives through algebraic closure alone</div>
-<canvas id="grid" width="720" height="720"></canvas>
+<nav class="site-nav" aria-label="Site navigation">
+  <a class="nav-home" href="index.html" aria-current="page">Closure</a>
+  <span class="nav-sep">/</span>
+  <a href="origin.html">How we got here</a>
+  <span class="nav-dot">•</span>
+  <a href="stack.html">Where we are</a>
+  <span class="nav-dot">•</span>
+  <a href="horizon.html">What the future holds</a>
+  <span class="nav-dot">•</span>
+  <a href="supporting-models.html">Supporting Models</a>
+  <span class="nav-sep">/</span>
+  <a href="support.html">Support</a>
+  <span class="nav-dot">•</span>
+  <a href="collaborate.html">Collaborate</a>
+  <span class="nav-dot">•</span>
+  <a href="newsletter.html">Newsletter</a>
+  <span class="nav-sep">/</span>
+  <a href="about.html">About</a>
+</nav>
 
-<div class="panel">
-  <div class="col">
-    <div class="bar-wrap">
-      <span class="bar-label">Hunger</span>
-      <div class="bar-bg"><div class="bar-fill" id="hbar" style="width:0%;background:#e44;"></div></div>
-      <span class="bar-val" id="hval">0.00</span>
+<main>
+  <div class="split">
+
+    <div>
+      <h1>Closure</h1>
+
+      <p>
+        Closure is a geometric computer &mdash; Von Neumann architecture,
+        but built on geometry instead of binary strings. Data is ordered
+        hierarchically in space rather than addressed as bit patterns,
+        and that changes what a computer can be.
+      </p>
+
+      <p>
+        Because data already lives in geometry, memory, verification, and
+        execution share the same underlying structure. That same structure is
+        also a new transformer architecture: memory, retrieval, and model
+        collapse into one object. A new general computer and a new transformer
+        architecture are the same thing.
+      </p>
+
+      <p>
+        The sphere to the right is that geometry running live. Every point is
+        a record, &sigma; is the drift of the whole sequence. Pull to open it,
+        release to close.
+      </p>
+
+      <p class="muted small">
+        Built from first principles by Walter. &nbsp;
+        <a href="https://zenodo.org/records/19140055" target="_blank" rel="noopener">Paper</a>
+        &nbsp;&middot;&nbsp;
+        <a href="https://github.com/faltz009/Closure-SDK" target="_blank" rel="noopener">Code</a>
+        &nbsp;&middot;&nbsp;
+        <a href="collaborate.html">Get in touch</a>
+      </p>
     </div>
-    <div class="bar-wrap">
-      <span class="bar-label">Cold</span>
-      <div class="bar-bg"><div class="bar-fill" id="cbar" style="width:0%;background:#4ae;"></div></div>
-      <span class="bar-val" id="cval">0.00</span>
+
+    <div style="display:flex; flex-direction:column; align-items:center; gap:24px;">
+
+      <div style="width:100%; cursor:crosshair;">
+        <canvas id="sphere-canvas" style="display:block; border-radius:4px;"></canvas>
+        <p class="caption" style="text-align:center; margin-top:6px;">
+          That &sigma; is the drift &mdash; hold to pull it open, release to watch it close.
+        </p>
+      </div>
+
+      <div style="width:100%;">
+        <h3>Memory</h3>
+        <p>
+          The same primitive that represents a record also checks whether a
+          sequence of them is coherent. The database is not separate from the
+          integrity layer &mdash; they are the same object. Point lookups
+          6.9&times; faster than SQLite. Integrity checks 89,885&times; faster.
+          <a href="stack.html">Details &rarr;</a>
+        </p>
+
+        <h3>Verification</h3>
+        <p>
+          Finding corruption normally means scanning. Here the sequence measures
+          its own coherence &mdash; one number tells you what broke, where, and
+          how much. 50 corruptions across 100,000 records: 384&nbsp;ms.
+          A Merkle tree takes 18.6 seconds.
+          <a href="stack.html">Details &rarr;</a>
+        </p>
+
+        <h3>Computation</h3>
+        <p>
+          Programs and data share the same geometric representation.
+          The learning system that runs without parameters is the same
+          architecture turned toward execution &mdash; no weights, no gradient
+          descent, no separation between what is stored and what runs.
+          <a href="enkidu.html">Watch it live &rarr;</a>
+        </p>
+
+        <p style="margin-top:1.6em;" class="muted small">
+          Seeking investment and collaboration.
+          <a href="collaborate.html">Get in touch &rarr;</a>
+        </p>
+      </div>
+
     </div>
+
   </div>
-  <div class="col">
-    <div class="info">Drive: <span id="drv">rest</span></div>
-    <div class="info">Tick: <span id="tick">0</span> | Meals: <span id="meals">0</span> | Camps: <span id="camps">0</span></div>
-    <div class="info">Pos: <span id="pos">(0,0)</span> | &sigma;: <span id="sig">0.00</span></div>
-    <div class="info">Env: <span id="env">thriving</span> | Food: <span id="fcnt">0</span></div>
-  </div>
+</main>
+
+<footer>
+  <a href="https://zenodo.org/records/19140055" target="_blank" rel="noopener">Paper (Zenodo)</a>
+  <a href="https://github.com/faltz009/Closure-SDK" target="_blank" rel="noopener">GitHub</a>
+  <a href="enkidu.html">Enkidu demo</a>
+</footer>
+
+
+<div class="ori-badge">
+  <div class="ori-badge-ring"><canvas id="ori-canvas"></canvas></div>
+  <span class="ori-badge-label">Open Research Institute</span>
 </div>
 
-<div class="controls">
-  <button onclick="reset()">Reset</button>
-  <button onclick="togglePause()" id="pauseBtn">Pause</button>
-  <button onclick="toggleSpeed()">Speed: <span id="spd">Normal</span></button>
-  <button onclick="spawnRandom()">Random Food</button>
-</div>
-<div class="controls" style="margin-top:4px;">
-  <button onclick="setMode('thriving')" id="btn_thriving" style="border-color:#aaa;">Thriving</button>
-  <button onclick="setMode('scarce')" id="btn_scarce">Scarce</button>
-  <button id="btn_famine" style="opacity:0.35;cursor:default;color:#666;">Famine (coming soon)</button>
-</div>
-
-<div class="controls" style="margin-top:6px;">
-  <button onclick="setTemperament('cautious')" id="tmp_cautious">Cautious</button>
-  <button onclick="setTemperament('balanced')" id="tmp_balanced" style="border-color:#aaa;">Balanced</button>
-  <button onclick="setTemperament('bold')" id="tmp_bold">Bold</button>
-  <span class="info" id="tmp_desc" style="margin-left:4px;max-width:220px;font-size:10px;">Weighs hunger and cold equally.</span>
-</div>
-<div class="controls" style="margin-top:6px;">
-  <button onclick="teachShelter()" id="btn_shelter" class="skill-btn">Teach him to build shelter</button>
-</div>
-
-<div class="dead-overlay" id="dead" style="display:none;">ENKIDU DIED &mdash; click Reset</div>
-
-<div id="eventlog" style="margin-top:8px;width:720px;height:140px;overflow-y:auto;font-size:10px;color:#666;background:#0a0a0a;border:1px solid #222;padding:4px 8px;line-height:1.5;"></div>
-
-</div><!-- sim-col -->
-
-<div class="explain-col">
-
-<div class="ex-title">A mind from geometry alone</div>
-
-<div class="ex-section">
-  <h3>The idea</h3>
-  <p>Enkidu begins at home, fed and warm, with every internal measure at zero &mdash;
-  a state we call identity. The world disturbs that balance continuously:
-  hunger accumulates with time, and cold accumulates with distance from shelter,
-  so the longer he is out and the further he roams, the larger these two
-  distances from identity grow. Because each distance points back toward
-  the thing that would resolve it &mdash; food for hunger, shelter for cold &mdash;
-  the environment itself produces a gradient simply by pulling him away
-  from equilibrium. Enkidu does not learn this gradient; he inherits it
-  from the geometry of the space he moves through.</p>
-</div>
-
-<div class="ex-section">
-  <h3>One function, all behavior</h3>
-  <p>His entire decision-making is a comparison: whichever distance is larger
-  determines the target, and he takes the step that most reduces it. When hunger
-  outweighs cold he walks toward food; when cold outweighs hunger he heads for
-  shelter. Applied tick after tick, this single comparison produces the foraging
-  trips, the direct paths home that never retrace the outbound route, the
-  hesitation when both drives are nearly equal, and the quiet rest at identity
-  once both distances fall back to zero.</p>
-</div>
-
-<div class="ex-section">
-  <h3>Tool use changes everything</h3>
-  <p>In Scarce mode, press <em>&ldquo;Teach him to build shelter&rdquo;</em> and watch what
-  happens. Whenever Enkidu finds himself too far from any existing shelter
-  he stops and builds one where he stands, creating a new point in the world
-  where cold resets to zero. Over time these camps form a network along his
-  foraging routes, extending the range he can survive &mdash; the same strategy
-  an animal uses when it chains dens across a territory.</p>
-  <table style="margin-top:10px;font-size:11px;color:#aaa;border-collapse:collapse;width:100%;">
-    <tr style="color:#666;text-transform:uppercase;font-size:9px;letter-spacing:1px;">
-      <td style="padding:3px 0;">Scarce mode</td>
-      <td style="text-align:right;padding:3px 6px;">No shelter</td>
-      <td style="text-align:right;padding:3px 6px;">With shelter</td>
-      <td style="padding:3px 6px;">Killer</td>
-    </tr>
-    <tr><td colspan="4" style="border-top:1px solid #333;"></td></tr>
-    <tr>
-      <td style="padding:3px 0;"><b style="color:#e44;">Cautious</b></td>
-      <td style="text-align:right;padding:3px 6px;">49%</td>
-      <td style="text-align:right;padding:3px 6px;color:#6c6;">100%</td>
-      <td style="padding:3px 6px;color:#e44;">hunger (72%)</td>
-    </tr>
-    <tr>
-      <td style="padding:3px 0;"><b>Balanced</b></td>
-      <td style="text-align:right;padding:3px 6px;">49%</td>
-      <td style="text-align:right;padding:3px 6px;color:#6c6;">100%</td>
-      <td style="padding:3px 6px;color:#4ae;">cold (81%)</td>
-    </tr>
-    <tr>
-      <td style="padding:3px 0;"><b style="color:#4ae;">Bold</b></td>
-      <td style="text-align:right;padding:3px 6px;">31%</td>
-      <td style="text-align:right;padding:3px 6px;color:#6c6;">90%</td>
-      <td style="padding:3px 6px;color:#4ae;">cold (100%)</td>
-    </tr>
-  </table>
-  <p style="margin-top:6px;font-size:10px;color:#666;font-style:italic;">
-  N=1500 runs, 600 ticks each. Thriving mode: 99% survival. Bold pays a 10% cost for risk-taking even with tools.</p>
-</div>
-
-<div class="ex-section">
-  <h3>Interact</h3>
-  <p style="font-size:11px;color:#aaa;line-height:1.8;">
-  <b>Click</b> the grid to drop food. Help him eat.<br>
-  <b>Shift+click</b> to place a shelter. Give him warmth.<br>
-  Or teach him to build his own and watch him survive.
-  </p>
-</div>
-
-<div class="ex-section" style="margin-top:16px; border-top: 1px solid #333; padding-top: 14px;">
-  <h3>For those familiar with the Free Energy Principle</h3>
-  <div class="ex-map">
-    <span class="fep">Generative model</span> &rarr; <span class="enk">quaternion composition on S&sup3;</span><br>
-    <span class="fep">Prior (expected state)</span> &rarr; <span class="enk">identity element = homeostasis</span><br>
-    <span class="fep">Free energy</span> &rarr; <span class="enk">geodesic distance from identity (&sigma;)</span><br>
-    <span class="fep">Variational step</span> &rarr; <span class="enk">collapses to geometry: pick the move that most reduces &sigma;</span><br>
-    <span class="fep">Precision weighting</span> &rarr; <span class="enk">larger drive selects the active channel</span><br>
-    <span class="fep">Niche construction</span> &rarr; <span class="enk">new shelter = new fixed point in state space</span><br>
-  </div>
-</div>
-
-<div class="ex-section" style="margin-top:16px; background: linear-gradient(135deg, #1a1a10 0%, #1a1510 100%); border: 1px solid #a08040; border-radius: 6px; padding: 14px;">
-  <h3 style="color:#d4aa50;">Why this matters</h3>
-  <p>A transformer learns attention through millions of parameters trained
-  on billions of tokens. Friston&rsquo;s Free Energy Principle describes
-  the same process through variational calculus. Here the algebra of
-  S&sup3; computes both directly: compose, measure distance from identity,
-  act on the largest. The environment writes the gradient by disturbing
-  equilibrium, and the geometry supplies the way home. Everything you
-  see on screen &mdash; the foraging, the hesitation, the shelters extending
-  his range &mdash; emerges from that single operation applied to a world
-  that refuses to leave him in peace.</p>
-</div>
-
-<div class="ex-section" style="margin-top:16px; border-top: 1px solid #333; padding-top: 14px;">
-  <h3 style="cursor:pointer;user-select:none;" onclick="document.getElementById('adv-panel').style.display = document.getElementById('adv-panel').style.display === 'none' ? 'block' : 'none';">Advanced &#9662;</h3>
-  <div id="adv-panel" style="display:none; margin-top:8px;">
-    <div style="display:grid; grid-template-columns: 1fr 56px; gap:4px 8px; font-size:11px; color:#aaa; align-items:center;">
-      <label>Hunger rate <span style="color:#555;">(starvation speed)</span></label>
-      <input type="number" id="knob_hr" value="0.028" step="0.005" min="0.005" max="0.2" style="width:54px;background:#1a1a1a;color:#eee;border:1px solid #444;padding:2px 4px;font-family:monospace;font-size:11px;">
-      <label>Cold rate <span style="color:#555;">(exposure speed)</span></label>
-      <input type="number" id="knob_cr" value="0.048" step="0.005" min="0.005" max="0.2" style="width:54px;background:#1a1a1a;color:#eee;border:1px solid #444;padding:2px 4px;font-family:monospace;font-size:11px;">
-      <label>Build threshold <span style="color:#555;">(steps)</span></label>
-      <input type="number" id="knob_bt" value="24" step="1" min="3" max="40" style="width:54px;background:#1a1a1a;color:#eee;border:1px solid #444;padding:2px 4px;font-family:monospace;font-size:11px;">
-      <label>Cold weight <span style="color:#555;">(drive bias)</span></label>
-      <input type="number" id="knob_cw" value="1.0" step="0.1" min="0.1" max="3.0" style="width:54px;background:#1a1a1a;color:#eee;border:1px solid #444;padding:2px 4px;font-family:monospace;font-size:11px;">
-    </div>
-    <div style="margin-top:8px; display:flex; gap:8px;">
-      <button onclick="applyKnobs()" style="font-size:10px;">Apply</button>
-      <button onclick="resetKnobs()" style="font-size:10px;">Defaults</button>
-    </div>
-  </div>
-</div>
-
-</div><!-- explain-col -->
-</div><!-- main -->
-
-<script>
-const THETA = Math.PI / 32;
-const HUNGER_LETHAL = Math.PI;
-const COLD_LETHAL = Math.PI;
-const GRID_SIZE = 25;
-const CELL = 14;
-const ORIGIN_PX = 360;
-const SHELTER_BUILD_TICKS = 3;
-
-const ENV = {
-  thriving: { chance: 0.06, range: 8 },
-  scarce:   { chance: 0.08, range: 22 },
-};
-
-const MOVES = { up:[0,1], down:[0,-1], left:[-1,0], right:[1,0] };
-
-function pos2quat(x, y) {
-  const a = y * THETA, b = x * THETA;
-  return [Math.cos(a)*Math.cos(b), Math.sin(a)*Math.cos(b), Math.cos(a)*Math.sin(b), Math.sin(a)*Math.sin(b)];
-}
-function sigma(q) { return Math.acos(Math.min(Math.abs(q[0]), 1)); }
-function dist(x1,y1,x2,y2) { return Math.abs(x1-x2)+Math.abs(y1-y2); }
-function geoSigma() { return sigma(pos2quat(enkidu.x, enkidu.y)); }
-function bestStep(ex, ey, tx, ty) {
-  let best = null, bd = Infinity;
-  for (const [name, [dx,dy]] of Object.entries(MOVES)) {
-    const d = dist(ex + dx, ey + dy, tx, ty);
-    if (d < bd) { bd = d; best = name; }
-  }
-  return best;
-}
-
-class IncidentReport {
-  constructor(type, sourceIndex, targetIndex, record, checks) {
-    this.incident_type = type;
-    this.source_index = sourceIndex;
-    this.target_index = targetIndex;
-    this.record = record;
-    this.checks = checks;
-  }
-}
-
-class StreamEnkidu {
-  constructor() {
-    this._unmatchedSource = new Map();
-    this._unmatchedTarget = new Map();
-    this._cycle = 0;
-    this._reclassified = 0;
-  }
-
-  _getPool(side) {
-    if (side === "source") return [this._unmatchedSource, this._unmatchedTarget];
-    if (side === "target") return [this._unmatchedTarget, this._unmatchedSource];
-    throw new Error("side must be source or target");
-  }
-
-  ingest(payload, position, side) {
-    const [own, other] = this._getPool(side);
-    const otherEntries = other.get(payload);
-    if (otherEntries && otherEntries.length) {
-      const [otherPos, _cycleAdded, incident] = otherEntries.shift();
-      if (!otherEntries.length) other.delete(payload);
-      const srcPos = side === "source" ? position : otherPos;
-      const tgtPos = side === "target" ? position : otherPos;
-      if (incident !== null) {
-        this._reclassified += 1;
-        return new IncidentReport("reorder", srcPos, tgtPos, payload, 0);
-      }
-      return null;
-    }
-    const ownEntries = own.get(payload) || [];
-    ownEntries.push([position, this._cycle, null]);
-    own.set(payload, ownEntries);
-    return null;
-  }
-
-  advanceCycle() {
-    this._cycle += 1;
-    const newIncidents = [];
-    for (const [payload, entries] of this._unmatchedSource.entries()) {
-      for (let i = 0; i < entries.length; i++) {
-        const [pos, cycleAdded, incident] = entries[i];
-        if (incident === null && cycleAdded < this._cycle) {
-          const inc = new IncidentReport("missing", pos, null, payload, 0);
-          entries[i] = [pos, cycleAdded, inc];
-          newIncidents.push(inc);
-        }
-      }
-    }
-    for (const [payload, entries] of this._unmatchedTarget.entries()) {
-      for (let i = 0; i < entries.length; i++) {
-        const [pos, cycleAdded, incident] = entries[i];
-        if (incident === null && cycleAdded < this._cycle) {
-          const inc = new IncidentReport("missing", null, pos, payload, 0);
-          entries[i] = [pos, cycleAdded, inc];
-          newIncidents.push(inc);
-        }
-      }
-    }
-    return newIncidents;
-  }
-
-  get unresolvedSource() {
-    let total = 0;
-    for (const entries of this._unmatchedSource.values()) total += entries.length;
-    return total;
-  }
-  get unresolvedTarget() {
-    let total = 0;
-    for (const entries of this._unmatchedTarget.values()) total += entries.length;
-    return total;
-  }
-  get reclassifiedCount() { return this._reclassified; }
-  reset() {
-    this._unmatchedSource.clear();
-    this._unmatchedTarget.clear();
-    this._cycle = 0;
-    this._reclassified = 0;
-  }
-}
-
-class DriveChannel {
-  constructor(label) {
-    this.label = label;
-    this.detector = new StreamEnkidu();
-    this.active = false;
-    this.lastIncidents = [];
-  }
-  observe(activeNow, tick) {
-    const incidents = [];
-    if (activeNow !== this.active) {
-      const side = activeNow ? "source" : "target";
-      const report = this.detector.ingest(this.label, tick, side);
-      if (report) incidents.push(report);
-      this.active = activeNow;
-    }
-    incidents.push(...this.detector.advanceCycle());
-    this.lastIncidents = incidents;
-    return this.awayFromIdentity;
-  }
-  get awayFromIdentity() { return this.detector.unresolvedSource > 0; }
-  snapshot() {
-    return {
-      away: this.awayFromIdentity,
-      unresolved_source: this.detector.unresolvedSource,
-      unresolved_target: this.detector.unresolvedTarget,
-      reclassified: this.detector.reclassifiedCount,
-      incidents: this.lastIncidents.map(inc => inc.incident_type),
-    };
-  }
-  reset() {
-    this.detector.reset();
-    this.active = false;
-    this.lastIncidents = [];
-  }
-}
-
-let enkidu, hunger, cold, alive, food, shelters, building, tickCount, meals, sheltersBuilt, trail, speed = 200, paused, envMode = "thriving", deathCause, canBuild, coldWeight = 1.0;
-let HUNGER_RATE, COLD_RATE, BUILD_THRESHOLD;
-let hungerChannel, coldChannel, gameLoop, lastLogDrive;
-
-const TEMPERAMENTS = {
-  cautious: { weight: 1.5, desc: "Prioritizes safety. Stays close to shelter." },
-  balanced: { weight: 1.0, desc: "Weighs hunger and cold equally." },
-  bold:     { weight: 0.5, desc: "Prioritizes feeding. Risks the cold." },
-};
-
-function nearestFood() {
-  if (!food.length) return null;
-  let best = null, bd = Infinity;
-  for (const f of food) {
-    const d = dist(enkidu.x, enkidu.y, f[0], f[1]);
-    if (d < bd) { bd = d; best = f; }
-  }
-  return best;
-}
-function atShelter() {
-  return shelters.some(([sx, sy]) => sx === enkidu.x && sy === enkidu.y);
-}
-function nearestShelter() {
-  let best = null, bd = Infinity;
-  for (const s of shelters) {
-    const d = dist(enkidu.x, enkidu.y, s[0], s[1]);
-    if (d < bd) { bd = d; best = s; }
-  }
-  return best;
-}
-function stepsToShelter() {
-  const s = nearestShelter();
-  return s ? dist(enkidu.x, enkidu.y, s[0], s[1]) : Infinity;
-}
-function shouldBuild() { return canBuild && stepsToShelter() > BUILD_THRESHOLD; }
-
-function activeDrive() {
-  if (!alive) return "dead";
-  if (building > 0) return "building";
-  const hungerOpen = hungerChannel.awayFromIdentity && food.length > 0;
-  const coldOpen = coldChannel.awayFromIdentity;
-  if (hungerOpen && (!coldOpen || hunger > cold * coldWeight)) return "hunger";
-  if (coldOpen) return shouldBuild() ? "building" : "shelter";
-  return "rest";
-}
-
-function tick() {
-  if (!alive || paused) return;
-  tickCount++;
-
-  const env = ENV[envMode];
-  const maxFood = envMode === "scarce" ? 2 : Infinity;
-  if (Math.random() < env.chance && food.length < maxFood) {
-    const r = env.range;
-    const fx = Math.floor(Math.random() * (r * 2 + 1)) - r;
-    const fy = Math.floor(Math.random() * (r * 2 + 1)) - r;
-    if (fx !== 0 || fy !== 0) food.push([fx, fy]);
-  }
-
-  hunger = Math.min(hunger + HUNGER_RATE, HUNGER_LETHAL);
-  cold = atShelter() ? 0 : Math.min(cold + COLD_RATE, COLD_LETHAL);
-
-  hungerChannel.observe(hunger > 0 && food.length > 0, tickCount);
-  coldChannel.observe(cold > 0.01, tickCount);
-
-  if (building > 0) {
-    building--;
-    if (building === 0) {
-      shelters.push([enkidu.x, enkidu.y]);
-      cold = 0;
-      sheltersBuilt++;
-      coldChannel.observe(false, tickCount);
-      logEvent(`Built camp at (${enkidu.x},${enkidu.y})`, "#a84");
-    }
-    updateUI();
-    return;
-  }
-
-  if (hunger >= HUNGER_LETHAL) {
-    alive = false;
-    deathCause = "starvation";
-    document.getElementById("dead").textContent = "ENKIDU STARVED — click Reset";
-    document.getElementById("dead").style.display = "block";
-    updateUI();
-    return;
-  }
-  if (cold >= COLD_LETHAL) {
-    alive = false;
-    deathCause = "hypothermia";
-    document.getElementById("dead").textContent = "ENKIDU FROZE — click Reset";
-    document.getElementById("dead").style.display = "block";
-    updateUI();
-    return;
-  }
-
-  const drive = activeDrive();
-  if (drive !== lastLogDrive && drive !== "rest") {
-    const msg = drive === "hunger" ? "Hungry — heading for food"
-      : drive === "shelter" ? "Cold — heading for shelter"
-      : "Too far from shelter — building camp";
-    const col = drive === "hunger" ? "#e44" : drive === "shelter" ? "#4ae" : "#a84";
-    logEvent(msg, col);
-    lastLogDrive = drive;
-  } else if (drive === "rest" && lastLogDrive !== "rest") {
-    logEvent("Home. Resting.", "#555");
-    lastLogDrive = "rest";
-  }
-
-  let tgt = null;
-  if (drive === "hunger") tgt = nearestFood();
-  else if (drive === "shelter") tgt = nearestShelter();
-  else if (drive === "building") {
-    building = SHELTER_BUILD_TICKS;
-    updateUI();
-    return;
-  }
-
-  if (tgt) {
-    const move = bestStep(enkidu.x, enkidu.y, tgt[0], tgt[1]);
-    if (move) {
-      const [dx, dy] = MOVES[move];
-      trail.push([enkidu.x, enkidu.y]);
-      if (trail.length > 80) trail.shift();
-      enkidu.x += dx;
-      enkidu.y += dy;
-    }
-  }
-
-  for (let i = 0; i < food.length; i++) {
-    if (food[i][0] === enkidu.x && food[i][1] === enkidu.y) {
-      hunger = 0;
-      food.splice(i, 1);
-      meals++;
-      hungerChannel.observe(false, tickCount);
-      logEvent(`Ate food at (${enkidu.x},${enkidu.y})`, "#4c4");
-      break;
-    }
-  }
-
-  updateUI();
-}
-
-const canvas = document.getElementById("grid");
-const ctx = canvas.getContext("2d");
-
-function draw() {
-  ctx.fillStyle = "#111";
-  ctx.fillRect(0, 0, 720, 720);
-  ctx.fillStyle = "#1a1a1a";
-  for (let gx = -GRID_SIZE; gx <= GRID_SIZE; gx++) {
-    for (let gy = -GRID_SIZE; gy <= GRID_SIZE; gy++) {
-      const px = ORIGIN_PX + gx * CELL;
-      const py = ORIGIN_PX - gy * CELL;
-      ctx.fillRect(px, py, 1, 1);
-    }
-  }
-
-  for (let si = 0; si < shelters.length; si++) {
-    const [sx, sy] = shelters[si];
-    const px = ORIGIN_PX + sx * CELL;
-    const py = ORIGIN_PX - sy * CELL;
-    const isHome = si === 0;
-    ctx.fillStyle = isHome ? "rgba(80,140,200,0.08)" : "rgba(200,160,60,0.08)";
-    ctx.beginPath(); ctx.arc(px, py, CELL * 1.5, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = isHome ? "#456" : "#a84";
-    ctx.fillRect(px - 4, py - 4, 8, 8);
-    ctx.fillStyle = "#888"; ctx.font = "8px monospace";
-    ctx.fillText(isHome ? "HOME" : "CAMP", px - 10, py + 14);
-  }
-
-  if (building > 0) {
-    const bpx = ORIGIN_PX + enkidu.x * CELL;
-    const bpy = ORIGIN_PX - enkidu.y * CELL;
-    const progress = 1 - (building / SHELTER_BUILD_TICKS);
-    ctx.strokeStyle = "#a84";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(bpx, bpy, 12, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
-    ctx.stroke();
-  }
-
-  for (const [fx, fy] of food) {
-    const px = ORIGIN_PX + fx * CELL;
-    const py = ORIGIN_PX - fy * CELL;
-    ctx.fillStyle = "#4c4";
-    ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2); ctx.fill();
-  }
-
-  for (let i = 0; i < trail.length; i++) {
-    const alpha = (i / trail.length) * 0.3;
-    const [tx, ty] = trail[i];
-    const px = ORIGIN_PX + tx * CELL;
-    const py = ORIGIN_PX - ty * CELL;
-    ctx.fillStyle = `rgba(100,150,255,${alpha})`;
-    ctx.fillRect(px - 1, py - 1, 3, 3);
-  }
-
-  const epx = ORIGIN_PX + enkidu.x * CELL;
-  const epy = ORIGIN_PX - enkidu.y * CELL;
-  if (alive) {
-    const hf = hunger / HUNGER_LETHAL;
-    const r = Math.floor(100 + 155 * hf);
-    const g = Math.floor(180 * (1 - hf));
-    const b = Math.floor(255 * (1 - hf));
-    ctx.fillStyle = `rgb(${r},${g},${b})`;
-    ctx.beginPath(); ctx.arc(epx, epy, 7, 0, Math.PI * 2); ctx.fill();
-    const gs = geoSigma();
-    if (gs < 0.3) {
-      ctx.strokeStyle = `rgba(100,200,255,${0.5 - gs})`;
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(epx, epy, 10, 0, Math.PI * 2); ctx.stroke();
-    }
-  } else {
-    ctx.fillStyle = "#f44";
-    ctx.font = "14px monospace";
-    ctx.fillText("X", epx - 5, epy + 5);
-  }
-
-  requestAnimationFrame(draw);
-}
-
-function logEvent(msg, color) {
-  const el = document.getElementById("eventlog");
-  const row = document.createElement("div");
-  row.style.color = color || "#666";
-  row.textContent = `t=${tickCount}  ${msg}`;
-  el.appendChild(row);
-  el.scrollTop = el.scrollHeight;
-  while (el.children.length > 500) el.removeChild(el.firstChild);
-}
-
-function updateUI() {
-  const hpct = (hunger / HUNGER_LETHAL * 100).toFixed(0);
-  const cpct = (cold / COLD_LETHAL * 100).toFixed(0);
-  document.getElementById("hbar").style.width = hpct + "%";
-  document.getElementById("hval").textContent = hunger.toFixed(2);
-  document.getElementById("cbar").style.width = cpct + "%";
-  document.getElementById("cval").textContent = cold.toFixed(2);
-  document.getElementById("drv").textContent = activeDrive();
-  document.getElementById("tick").textContent = tickCount;
-  document.getElementById("meals").textContent = meals;
-  document.getElementById("camps").textContent = sheltersBuilt;
-  document.getElementById("pos").textContent = `(${enkidu.x},${enkidu.y})`;
-  document.getElementById("sig").textContent = geoSigma().toFixed(3);
-  document.getElementById("env").textContent = envMode;
-  document.getElementById("fcnt").textContent = food.length;
-
-  const drv = document.getElementById("drv");
-  const d = activeDrive();
-  drv.style.color = d === "hunger" ? "#e44" : d === "shelter" ? "#4ae" : d === "building" ? "#a84" : d === "dead" ? "#f44" : "#888";
-}
-
-function spawnRandom() {
-  const env = ENV[envMode];
-  const x = Math.floor(Math.random() * (env.range * 2 + 1)) - env.range;
-  const y = Math.floor(Math.random() * (env.range * 2 + 1)) - env.range;
-  if (x !== 0 || y !== 0) food.push([x, y]);
-}
-
-canvas.addEventListener("click", (e) => {
-  if (!alive) return;
-  const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
-  const gx = Math.round((mx - ORIGIN_PX) / CELL);
-  const gy = Math.round((ORIGIN_PX - my) / CELL);
-  if (Math.abs(gx) <= GRID_SIZE && Math.abs(gy) <= GRID_SIZE) {
-    if (e.shiftKey) shelters.push([gx, gy]);
-    else food.push([gx, gy]);
-  }
-});
-
-function setMode(mode) {
-  envMode = mode;
-  for (const m of ["thriving", "scarce"]) {
-    document.getElementById("btn_" + m).style.borderColor = m === mode ? "#aaa" : "#555";
-  }
-  resetWorld();
-}
-
-function teachShelter() {
-  canBuild = true;
-  document.getElementById("btn_shelter").textContent = "Shelter building ✔";
-  document.getElementById("btn_shelter").classList.add("learned");
-  logEvent("Learned shelter building", "#d4aa50");
-}
-
-function togglePause() {
-  paused = !paused;
-  document.getElementById("pauseBtn").textContent = paused ? "Resume" : "Pause";
-}
-
-const speeds = [["Slow", 400], ["Normal", 200], ["Fast", 80], ["Turbo", 30]];
-let speedIndex = 1;
-function toggleSpeed() {
-  speedIndex = (speedIndex + 1) % speeds.length;
-  speed = speeds[speedIndex][1];
-  document.getElementById("spd").textContent = speeds[speedIndex][0];
-  clearInterval(gameLoop);
-  gameLoop = setInterval(tick, speed);
-}
-
-function setTemperament(t) {
-  coldWeight = TEMPERAMENTS[t].weight;
-  document.getElementById("tmp_desc").textContent = TEMPERAMENTS[t].desc;
-  document.getElementById("knob_cw").value = TEMPERAMENTS[t].weight;
-  for (const k of ["cautious", "balanced", "bold"]) {
-    document.getElementById("tmp_" + k).style.borderColor = k === t ? "#aaa" : "#555";
-  }
-  logEvent("Temperament: " + t, "#888");
-}
-
-function applyKnobs() {
-  HUNGER_RATE = parseFloat(document.getElementById("knob_hr").value) || 0.028;
-  COLD_RATE = parseFloat(document.getElementById("knob_cr").value) || 0.048;
-  BUILD_THRESHOLD = parseInt(document.getElementById("knob_bt").value) || 24;
-  coldWeight = parseFloat(document.getElementById("knob_cw").value) || 1.0;
-  for (const k of ["cautious", "balanced", "bold"]) {
-    document.getElementById("tmp_" + k).style.borderColor = "#555";
-  }
-  logEvent("Knobs applied: HR=" + HUNGER_RATE + " CR=" + COLD_RATE + " BT=" + BUILD_THRESHOLD + " CW=" + coldWeight, "#888");
-}
-
-function resetKnobs() {
-  HUNGER_RATE = 0.028;
-  COLD_RATE = 0.048;
-  BUILD_THRESHOLD = 24;
-  coldWeight = 1.0;
-  document.getElementById("knob_hr").value = "0.028";
-  document.getElementById("knob_cr").value = "0.048";
-  document.getElementById("knob_bt").value = "24";
-  document.getElementById("knob_cw").value = "1.0";
-  setTemperament("balanced");
-  logEvent("Knobs reset to defaults", "#888");
-}
-
-function resetWorld() {
-  enkidu = {x:0, y:0};
-  hunger = 0;
-  cold = 0;
-  alive = true;
-  food = [];
-  shelters = [[0,0]];
-  building = 0;
-  tickCount = 0;
-  meals = 0;
-  sheltersBuilt = 0;
-  trail = [];
-  paused = false;
-  deathCause = "";
-  canBuild = false;
-  coldWeight = 1.0;
-  HUNGER_RATE = 0.028;
-  COLD_RATE = 0.048;
-  BUILD_THRESHOLD = 24;
-  hungerChannel = new DriveChannel("hunger");
-  coldChannel = new DriveChannel("cold");
-  lastLogDrive = "";
-  document.getElementById("dead").style.display = "none";
-  document.getElementById("pauseBtn").textContent = "Pause";
-  document.getElementById("env").textContent = envMode;
-  document.getElementById("spd").textContent = speeds[speedIndex][0];
-  for (const m of ["thriving", "scarce"]) {
-    document.getElementById("btn_" + m).style.borderColor = m === envMode ? "#aaa" : "#555";
-  }
-  document.getElementById("btn_shelter").textContent = "Teach him to build shelter";
-  document.getElementById("btn_shelter").classList.remove("learned");
-  document.getElementById("eventlog").innerHTML = "";
-  document.getElementById("knob_hr").value = "0.028";
-  document.getElementById("knob_cr").value = "0.048";
-  document.getElementById("knob_bt").value = "24";
-  document.getElementById("knob_cw").value = "1.0";
-  setTemperament("balanced");
-  updateUI();
-}
-
-function reset() { resetWorld(); }
-
-resetWorld();
-draw();
-gameLoop = setInterval(tick, speed);
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+<script src="ribbon.js"></script>
+<script src="shatter.js"></script>
+<script src="sphere.js"></script>
 </body>
 </html>

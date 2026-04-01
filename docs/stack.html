@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Where we are — Closure</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="has-ribbon">
+
+<div id="ribbon-bg"></div>
+
+<nav class="site-nav" aria-label="Site navigation">
+  <a class="nav-home" href="index.html">Closure</a>
+  <span class="nav-sep">/</span>
+  <a href="origin.html">How we got here</a>
+  <span class="nav-dot">•</span>
+  <a href="stack.html" aria-current="page">Where we are</a>
+  <span class="nav-dot">•</span>
+  <a href="horizon.html">What the future holds</a>
+  <span class="nav-dot">•</span>
+  <a href="supporting-models.html">Supporting Models</a>
+  <span class="nav-sep">/</span>
+  <a href="support.html">Support</a>
+  <span class="nav-dot">•</span>
+  <a href="collaborate.html">Collaborate</a>
+  <span class="nav-dot">•</span>
+  <a href="newsletter.html">Newsletter</a>
+  <span class="nav-sep">/</span>
+  <a href="about.html">About</a>
+</nav>
+
+<main>
+  <h1>Where we are</h1>
+  <p class="muted">
+    The stack is three layers. Each is functional, tested, and available now.
+  </p>
+
+  <!-- ── 1. DATA VERIFICATION ──────────────────────────── -->
+
+  <div class="stack-block">
+    <div class="tag">Data Verification</div>
+    <h2>Know whether your data arrived intact &mdash; and exactly what didn&rsquo;t</h2>
+
+    <p>
+      The core primitive. Every record gets hashed and composed onto S&sup3;.
+      When a sequence is coherent, the composition closes back to where it started.
+      When it isn&rsquo;t, the product drifts, and the drift is exact: how much,
+      where in the sequence, and what kind of fault &mdash; missing record or reorder,
+      always distinguishable.
+    </p>
+
+    <p>
+      Two tools implement this. The CLI handles file-to-file comparison and live
+      stream monitoring. The <code>bind()</code> / <code>prism</code> functions handle
+      zero-knowledge verification: two parties confirm they hold the same data by
+      exchanging 16 bytes. The raw data never moves. Neither side can fake agreement.
+    </p>
+
+    <h3>Performance against Merkle trees (100,000 records)</h3>
+
+    <div class="bench-wrap">
+      <table class="bench">
+        <thead>
+          <tr>
+            <th>Faults</th>
+            <th class="r">Merkle tree</th>
+            <th class="r">Closure</th>
+            <th class="r">Speedup</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td>  <td class="r">368 ms</td>  <td class="r win">362 ms</td>  <td class="r">1&times;</td></tr>
+          <tr><td>5</td>  <td class="r">1.85 s</td>  <td class="r win">396 ms</td>  <td class="r win">4.7&times;</td></tr>
+          <tr><td>10</td> <td class="r">3.68 s</td>  <td class="r win">383 ms</td>  <td class="r win">9.6&times;</td></tr>
+          <tr><td>25</td> <td class="r">9.39 s</td>  <td class="r win">426 ms</td>  <td class="r win">22&times;</td></tr>
+          <tr><td>50</td> <td class="r">18.6 s</td>  <td class="r win">384 ms</td>  <td class="r win">48&times;</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      A Merkle tree must rebuild after every fault it finds &mdash; O(k&middot;n) for
+      k faults. This system composes both sequences once and classifies all faults in
+      a single walk. The cost is O(n) regardless of fault count.
+    </p>
+
+    <p class="muted small">
+      <code>pip install closure-sdk</code> &nbsp;&middot;&nbsp;
+      <code>pip install closure-cli</code> &nbsp;&middot;&nbsp;
+      <a href="https://github.com/faltz009/Closure-SDK" target="_blank" rel="noopener">GitHub</a>
+    </p>
+  </div>
+
+  <!-- ── 2. GEOMETRIC DATABASE ─────────────────────────── -->
+
+  <div class="stack-block">
+    <div class="tag">Geometric Database</div>
+    <h2>Storage with integrity built in</h2>
+
+    <p>
+      Closure DNA is a database where every column is a composition tree on S&sup3;.
+      The data lives in the structure, not alongside it. Integrity is not an
+      optional check you run afterward &mdash; it is native to how the data is held.
+      Any record change, deletion, or insertion is detectable in microseconds.
+    </p>
+
+    <h3>Benchmark against SQLite &mdash; 1,000,000 records (fair comparison)</h3>
+    <p class="muted small" style="margin-bottom: 0.8em;">
+      SQLite has indexes on all filtered columns. Closure DNA wins on almost every axis.
+    </p>
+
+    <div class="bench-wrap">
+      <table class="bench">
+        <thead>
+          <tr>
+            <th>Operation</th>
+            <th class="r">Closure DNA</th>
+            <th class="r">SQLite</th>
+            <th class="r">Ratio</th>
+            <th>Winner</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Insert</td>                     <td class="r">786.6 ms</td>   <td class="r">934.8 ms</td>   <td class="r">1.2&times;</td>     <td class="win">Closure DNA</td></tr>
+          <tr><td>Get &times;1000</td>             <td class="r">669 &mu;s</td>  <td class="r">4.60 ms</td>    <td class="r">6.9&times;</td>     <td class="win">Closure DNA</td></tr>
+          <tr><td>Filter city=X (indexed)</td>     <td class="r">11.9 ms</td>    <td class="r">81.0 ms</td>    <td class="r">6.8&times;</td>     <td class="win">Closure DNA</td></tr>
+          <tr><td>Filter age&gt;50 (indexed)</td>  <td class="r">20.2 ms</td>    <td class="r">176.8 ms</td>   <td class="r">8.8&times;</td>     <td class="win">Closure DNA</td></tr>
+          <tr><td>city=X AND age&gt;50</td>        <td class="r">61.7 ms</td>    <td class="r">94.6 ms</td>    <td class="r">1.5&times;</td>     <td class="win">Closure DNA</td></tr>
+          <tr><td>AVG(score)</td>                  <td class="r">14.6 ms</td>    <td class="r">53.3 ms</td>    <td class="r">3.6&times;</td>     <td class="win">Closure DNA</td></tr>
+          <tr><td>Sort by age</td>                 <td class="r">73.0 ms</td>    <td class="r">385.0 ms</td>   <td class="r">5.3&times;</td>     <td class="win">Closure DNA</td></tr>
+          <tr><td>Update 1 row</td>                <td class="r">73.9 &mu;s</td> <td class="r">164.4 &mu;s</td><td class="r">2.2&times;</td>     <td class="win">Closure DNA</td></tr>
+          <tr><td>Delete 1 row</td>                <td class="r">34.4 &mu;s</td> <td class="r">84.8 &mu;s</td> <td class="r">2.5&times;</td>     <td class="win">Closure DNA</td></tr>
+          <tr class="gap"><td>Integrity check</td> <td class="r">11.7 &mu;s</td> <td class="r">1.05 s</td>     <td class="r win">89,885&times;</td><td class="win">Closure DNA</td></tr>
+          <tr><td>Resonance search</td>            <td class="r excl">836.8 ms</td><td class="r na">N/A</td>  <td class="r na">&mdash;</td>      <td class="excl">Exclusive</td></tr>
+          <tr><td>Table identity check</td>        <td class="r excl">13.9 &mu;s</td><td class="r na">N/A</td><td class="r na">&mdash;</td>      <td class="excl">Exclusive</td></tr>
+          <tr class="gap"><td>Cold start (reopen)</td><td class="r">376.8 &mu;s</td><td class="r win">78.1 &mu;s</td><td class="r">4.8&times;</td><td>SQLite</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>On disk space</h3>
+    <p>
+      Closure DNA uses 449.8&nbsp;MB for 1M records vs SQLite&rsquo;s 62.1&nbsp;MB.
+      The gap is the geometric sidecars: 186.1&nbsp;MB of composition trees that can
+      be deleted and regenerated at any time. The raw column data is 248.4&nbsp;MB.
+    </p>
+
+    <div class="callout">
+      <p>
+        The sidecars are the key architectural point. Your raw data lives in one
+        place. The geometric state &mdash; the verification layer &mdash; is a
+        derived artifact, rebuildable from the columns. Two systems that want to
+        confirm they hold identical data exchange a single composition product:
+        one point on S&sup3;, 32&nbsp;bytes. Neither side exposes its records.
+        This is the verification primitive made persistent.
+      </p>
+    </div>
+
+    <p class="muted small">
+      <code>pip install closure-dna</code> &nbsp;&middot;&nbsp;
+      <a href="https://github.com/faltz009/Closure-SDK" target="_blank" rel="noopener">GitHub</a>
+    </p>
+  </div>
+
+  <!-- ── 3. LEARNING ARCHITECTURE ───────────────────────── -->
+
+  <div class="stack-block">
+    <div class="tag">Learning Architecture</div>
+    <h2>Computation without parameters</h2>
+
+    <p>
+      Enkidu is a prototype agent that forages, builds shelter, and survives in a
+      hostile environment. It has no neural network, no trained weights, no learned
+      parameters whatsoever. Every decision is a single geometric comparison:
+      which distance from identity is larger, and which action most reduces it.
+    </p>
+
+    <p>
+      The environment computes the gradient. Identity is homeostasis. Free energy
+      is geodesic distance from identity on S&sup3;. The geometry supplies the path
+      home. Everything you see in the demo &mdash; the foraging routes, the
+      hesitation when drives are balanced, the camps extending his territory in
+      scarce environments &mdash; emerges from that one operation applied
+      repeatedly to a world that refuses to leave him at rest.
+    </p>
+
+    <p>
+      Tested against Kaggle datasets and internal generalization benchmarks.
+      The agent generalizes to novel environments without retraining.
+      <a href="enkidu.html">Run it live &rarr;</a>
+    </p>
+
+    <h3>Why this matters beyond the demo</h3>
+
+    <p>
+      A transformer learns attention through millions of parameters trained on
+      billions of tokens. Friston&rsquo;s Free Energy Principle describes the
+      same process through variational calculus. Enkidu computes both directly:
+      compose, measure distance from identity, act on the largest. The
+      correspondence is not metaphorical &mdash; it is exact.
+    </p>
+
+    <p>
+      This is not a toy. It is the first step of a learning architecture where
+      the algebraic substrate of the stack is the model. Memory, verification, and
+      execution share one representation. The database is not a separate layer
+      from the compute. This is the direction of the work.
+    </p>
+
+    <h3>Supporting literature</h3>
+    <p>
+      Six current research directions independently converge on the same geometry:
+      world models in compact latent spaces, continuous vector representations
+      replacing discrete tokens, sheaf-theoretic distributed learning, hyperagent
+      self-reference, quantization that preserves geometric structure, and
+      evolutionary optimization at scale. The papers are in the repository.
+      The Closure architecture sits where they intersect.
+    </p>
+  </div>
+
+</main>
+
+<footer>
+  <a href="https://zenodo.org/records/19140055" target="_blank" rel="noopener">Paper (Zenodo)</a>
+  <a href="https://github.com/faltz009/Closure-SDK" target="_blank" rel="noopener">GitHub</a>
+  <a href="enkidu.html">Enkidu demo</a>
+</footer>
+
+<div class="ori-badge">
+  <div class="ori-badge-ring"><canvas id="ori-canvas"></canvas></div>
+  <span class="ori-badge-label">Open Research Institute</span>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+<script src="ribbon.js"></script>
+<script src="shatter.js"></script>
+</body>
+</html>

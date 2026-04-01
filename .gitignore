@@ -59,46 +59,20 @@
 !closure_cli/reader.py
 !closure_cli/seeker.py
 
-# ─── closure_dna (geometric database) ───────────────────────────────
-!closure_dna/
-!closure_dna/README.md
-!closure_dna/CLOSURE_DNA.md
-!closure_dna/pyproject.toml
-!closure_dna/__init__.py
-!closure_dna/__main__.py
-!closure_dna/table.py
-!closure_dna/database.py
-!closure_dna/query.py
-!closure_dna/result.py
-!closure_dna/cli.py
-!closure_dna/repl.py
-!closure_dna/sql.py
-!closure_dna/web.py
-!closure_dna/rust/
-!closure_dna/rust/src/
-!closure_dna/rust/src/table.rs
-!closure_dna/rust/src/composition_tree.rs
-!closure_dna/benchmarks/
-!closure_dna/benchmarks/bench_dna.py
-!closure_dna/benchmarks/benchmark_100k.txt
-!closure_dna/tests/
-!closure_dna/tests/__init__.py
-!closure_dna/tests/conftest.py
-!closure_dna/tests/test_table.py
-!closure_dna/tests/test_database.py
-!closure_dna/tests/test_dna_features.py
-!closure_dna/tests/test_dna_rigorous.py
-!closure_dna/tests/test_dna_cli.py
-!closure_dna/tests/test_sql.py
-!closure_dna/tests/test_repl.py
-!closure_dna/tests/test_cli.py
-!closure_dna/tests/test_demo.py
-
-# ─── closure_ea (Rust only — build dependency for shared crate) ──────
+# ─── closure_ea (computer umbrella: dna + vm + demos) ───────────────
 !closure_ea/
-!closure_ea/rust/
-!closure_ea/rust/src/
-!closure_ea/rust/src/trinity.rs
+!closure_ea/README.md
+!closure_ea/__init__.py
+!closure_ea/__main__.py
+!closure_ea/dna/
+!closure_ea/dna/**
+!closure_ea/vm/
+!closure_ea/vm/**
+!closure_ea/enkidu_alive/
+!closure_ea/enkidu_alive/**
+!closure_ea/archive/
+!closure_ea/archive/legacy_runtime/
+!closure_ea/archive/legacy_runtime/**
 
 # ─── Tests (root-level SDK tests) ───────────────────────────────────
 !tests/
@@ -136,3 +110,12 @@
 # ─── GitHub Pages ────────────────────────────────────────────────────
 !docs/
 !docs/**
+
+# Keep caches ignored even under allowlisted closure_ea subtrees
+__pycache__/
+.pytest_cache/
+closure_ea/**/__pycache__/
+closure_ea/**/.pytest_cache/
+closure_ea/vm/target/
+closure_ea/dna/**/*.lock
+closure_ea/dna/demo/coffee_store/output/

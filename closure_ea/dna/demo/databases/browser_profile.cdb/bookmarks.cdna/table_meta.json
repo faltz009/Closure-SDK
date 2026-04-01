@@ -1,0 +1,56 @@
+[
+  {
+    "name": "bookmark_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": true,
+    "references": null,
+    "not_null": true,
+    "unique": true
+  },
+  {
+    "name": "profile_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": false,
+    "references": "profiles.profile_id",
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "folder",
+    "type": "bytes",
+    "indexed": true,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "title",
+    "type": "bytes",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "url",
+    "type": "bytes",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "added_at",
+    "type": "bytes",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  }
+]

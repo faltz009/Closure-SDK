@@ -1,0 +1,47 @@
+[
+  {
+    "name": "attachment_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": true,
+    "references": null,
+    "not_null": true,
+    "unique": true
+  },
+  {
+    "name": "message_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": false,
+    "references": "messages.message_id",
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "mime_type",
+    "type": "bytes",
+    "indexed": true,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "size_bytes",
+    "type": "i64",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "storage_key",
+    "type": "bytes",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  }
+]

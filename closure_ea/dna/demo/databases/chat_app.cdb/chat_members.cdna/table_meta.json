@@ -1,0 +1,47 @@
+[
+  {
+    "name": "membership_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": true,
+    "references": null,
+    "not_null": true,
+    "unique": true
+  },
+  {
+    "name": "chat_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": false,
+    "references": "chats.chat_id",
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "user_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": false,
+    "references": "users.user_id",
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "role",
+    "type": "bytes",
+    "indexed": true,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "joined_at",
+    "type": "bytes",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  }
+]

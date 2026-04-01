@@ -1,0 +1,1 @@
+["SELECT * FROM messages WHERE chat_id = 12 ORDER BY sent_at DESC LIMIT 50","SELECT sender_id, COUNT(*) AS sent_count FROM messages GROUP BY sender_id ORDER BY sent_count DESC LIMIT 20","SELECT * FROM messages JOIN users ON messages.sender_id = users.user_id LIMIT 25","SELECT * FROM attachments WHERE mime_type = 'image/jpeg' ORDER BY size_bytes DESC LIMIT 20"]

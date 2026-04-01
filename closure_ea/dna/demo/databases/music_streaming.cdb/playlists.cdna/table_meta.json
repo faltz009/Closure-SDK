@@ -1,0 +1,47 @@
+[
+  {
+    "name": "playlist_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": true,
+    "references": null,
+    "not_null": true,
+    "unique": true
+  },
+  {
+    "name": "user_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": false,
+    "references": "users.user_id",
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "title",
+    "type": "bytes",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "visibility",
+    "type": "bytes",
+    "indexed": true,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "vibe",
+    "type": "bytes",
+    "indexed": true,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  }
+]

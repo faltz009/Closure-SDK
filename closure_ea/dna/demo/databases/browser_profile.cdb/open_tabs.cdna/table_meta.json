@@ -1,0 +1,56 @@
+[
+  {
+    "name": "tab_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": true,
+    "references": null,
+    "not_null": true,
+    "unique": true
+  },
+  {
+    "name": "device_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": false,
+    "references": "devices.device_id",
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "domain",
+    "type": "bytes",
+    "indexed": true,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "title",
+    "type": "bytes",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "is_pinned",
+    "type": "i64",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "last_active_at",
+    "type": "bytes",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  }
+]

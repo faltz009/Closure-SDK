@@ -115,7 +115,7 @@ impl LieGroup for SphereGroup {
     }
 }
 
-// ── Standalone [f64; 4] functions for direct use by closure_vm ──────
+// ── Standalone [f64; 4] functions for direct use by the VM layer ─────
 
 pub const IDENTITY: [f64; 4] = [1.0, 0.0, 0.0, 0.0];
 

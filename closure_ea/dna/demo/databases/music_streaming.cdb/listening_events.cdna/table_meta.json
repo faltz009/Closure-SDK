@@ -1,0 +1,56 @@
+[
+  {
+    "name": "event_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": true,
+    "references": null,
+    "not_null": true,
+    "unique": true
+  },
+  {
+    "name": "user_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": false,
+    "references": "users.user_id",
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "track_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": false,
+    "references": "tracks.track_id",
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "source",
+    "type": "bytes",
+    "indexed": true,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "seconds_played",
+    "type": "i64",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "listened_at",
+    "type": "bytes",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  }
+]

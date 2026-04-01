@@ -1,9 +1,5 @@
-"""Closure Ea — recursive closure over learned substrates on S³."""
+"""Closure EA — umbrella computer module."""
 
-from closure_ea.lattice import ClosureEvent, Lattice, LatticeCell
+__version__ = "0.1.0"
 
-__all__ = [
-    "ClosureEvent",
-    "Lattice",
-    "LatticeCell",
-]
+__all__ = ["dna", "enkidu_alive"]

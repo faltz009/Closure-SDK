@@ -1,0 +1,462 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+
+\geometry{margin=1in}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{axiom}{Axiom}
+\newtheorem{definition}{Definition}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+\title{Geometric Closure:\\A General Computer from Ordered Composition on $S^3$}
+
+\author{
+Walter Henrique Alves da Silva\\
+\texttt{walter.h057@gmail.com}\\
+ORCID: 0009-0001-0857-096X\\[6pt]
+Open Research Institute
+}
+
+\date{April 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This paper presents a general-purpose computational architecture in which all operations --- arithmetic, memory, addressing, control flow, compilation, verification, and learning --- arise from a single algebraic primitive: the Hamilton product on $S^3$, the 3-sphere of unit quaternions. Hurwitz's theorem forces this choice: $S^3$ is the unique space supporting sequential, associative, non-commutative, compact composition. Two axioms (existence requires interaction, coherence requires directionality) determine the full structure, producing three theorems that characterize coherence failure completely.
+
+The architecture defines nine instructions, all reducible to quaternion composition, and implements a fetch-execute cycle where programs and data share the same format in the same memory. It departs from von Neumann in three structural ways: addressing is by content (geometric resonance), integrity verification is intrinsic to every operation (the geodesic distance $\sigma$ from identity), and timing is self-generated through closure cadence. When a program's composition returns to identity, the closure element is a single quaternion that reproduces the program's effect in one step --- compilation is exact, automatic, and algebraic.
+
+Validation includes 40 virtual machine tests covering arithmetic, compilation, content-addressed fetch from a geometric database, composite-key addressing, self-modification, learning, generalization, configurable multi-level hierarchy with caller-owned DNA tables, weighted resonance addressing, and an explicit Turing machine simulation that passes on both pure S³ algebra and live DNA memory; benchmarks showing 11,027$\times$ faster integrity checking than SQLite and 9,245$\times$ faster fault localization than hash chains on $10^6$ records; and a structural correspondence to biological computation (proteins as programs, DNA as memory, the ribosome as the fetch-execute cycle) that follows from the shared algebraic constraints. The implementation is 9,856 lines of Rust with Python bindings, passing 376 tests across the full stack.
+\end{abstract}
+
+
+% ============================================================
+\section{Introduction}
+% ============================================================
+
+Every general-purpose computer built since 1945 implements the same insight \cite{vonneumann1945}: programs and data live in the same memory, in the same format, addressed by integer location. Von Neumann was right about programs-as-data --- this is the principle that makes a computer general, the reason software exists at all. What has aged is everything around that insight: the infrastructure required to make it trustworthy.
+
+A modern system that needs to know whether its data is intact layers checksums on top of the storage, hash chains on top of the checksums, Merkle trees on top of the hash chains, consensus protocols on top of the Merkle trees, digital signatures on top of the consensus, and write-ahead logs on top of everything. Each layer is a separate subsystem with its own failure modes, maintained by a separate team, consuming separate resources. The trust stack is taller than the compute stack, and the question every layer answers --- is this data still what it was? --- is the same question at every level.
+
+That question has a minimal form: $A \stackrel{?}{=} A$. Identity verification. A proton answers it through electromagnetic binding in femtoseconds, a cell answers it through metabolic cycling in milliseconds, a mind answers it through memory in hundreds of milliseconds, and a distributed ledger answers it through consensus in seconds. The question is universal, and the failure to answer it is dissolution at every scale.
+
+This paper asks what happens when the computational primitive itself answers $A \stackrel{?}{=} A$ as a side effect of every operation. If the primitive is ordered composition on $S^3$ --- the Hamilton product on unit quaternions, forced by Hurwitz's theorem \cite{hurwitz1898} as the unique algebra supporting sequential, associative, non-commutative, compact composition --- then every operation simultaneously computes a result and measures coherence. The geodesic distance $\sigma = \arccos(|w|)$ from the running product to identity is available for free after every composition. Content-addressed memory, hierarchical timing, and exact compilation emerge as algebraic consequences.
+
+The result is a general-purpose computer where the trust layer is the compute layer. They are the same operation.
+
+\subsection{Contributions}
+
+This paper contributes: a derivation of $S^3$ as the forced computational substrate from four requirements and Hurwitz's theorem (Section~2); two axioms that determine the full algebraic structure, producing three theorems with proofs (Section~3); a formal instruction set of nine operations with an explicit Turing completeness construction (Section~4); a virtual machine architecture with two execution modes, automatic compilation, and self-generated timing (Section~5); benchmarks against SQLite and hash chains on $10^6$ records (Section~6); a structural correspondence to biological computation that follows from the shared algebraic constraints (Section~7); and a working implementation passing 376 tests across 9,856 lines of Rust.
+
+
+% ============================================================
+\section{Why $S^3$ Is Forced}
+% ============================================================
+
+The choice of $S^3$ as the computational substrate is a mathematical consequence of four requirements that any ordered composition system must satisfy.
+
+\textbf{Sequential composition.} Elements must compose in order: the result of composing $A$ then $B$ must be well-defined and depend on the order.
+
+\textbf{Associativity.} Grouping must be irrelevant: $(A \cdot B) \cdot C = A \cdot (B \cdot C)$. A running product $C_t = C_{t-1} \cdot g_t$ accumulates one element at a time onto a growing total, and if the grouping mattered, the total would depend on how the history is parenthesized --- there is no canonical parenthesization for a stream of arriving data.
+
+\textbf{Non-commutativity.} Order must matter: $A \cdot B \neq B \cdot A$ in general. If composition were commutative, permuting the elements would produce the same result, and the ordering information would be lost.
+
+\textbf{Compactness.} The space must be bounded: compositions cannot diverge to infinity. Compactness guarantees numerical stability and ensures that closure (return to identity) is always reachable.
+
+Hurwitz's theorem (1898) establishes that the only normed division algebras over $\mathbb{R}$ are the reals $\mathbb{R}$ (dimension 1), the complex numbers $\mathbb{C}$ (dimension 2), the quaternions $\mathbb{H}$ (dimension 4), and the octonions $\mathbb{O}$ (dimension 8) \cite{hurwitz1898}. Each is obtained by doubling the previous, and each doubling trades exactly one structural property: $\mathbb{R} \to \mathbb{C}$ trades total ordering (there is no consistent way to say $i > 0$ or $i < 0$), $\mathbb{C} \to \mathbb{H}$ trades commutativity ($ij = k$ and $ji = -k$, so $ij \neq ji$), and $\mathbb{H} \to \mathbb{O}$ trades associativity ($(ab)c \neq a(bc)$ for generic octonion triples).
+
+$\mathbb{R}$ and $\mathbb{C}$ are commutative: they satisfy the first two requirements but fail the third, losing ordering information. $\mathbb{O}$ fails associativity: running products become ambiguous because different parenthesizations give different answers. Doubling further to the sedenions introduces zero divisors ($ab = 0$ with $a, b \neq 0$), breaking the norm-product identity $\|ab\| = \|a\|\|b\|$ that guarantees compositions stay on the sphere.
+
+The quaternions $\mathbb{H}$ \cite{hamilton1843} are the unique algebra satisfying all four requirements. Their unit elements --- quaternions $q = [w, x, y, z]$ with $w^2 + x^2 + y^2 + z^2 = 1$ --- form the 3-sphere $S^3$, which is compact. $S^3$ is the computational substrate, and Hurwitz guarantees there is no richer one.
+
+A useful way to think about this: choosing a composition space is like choosing a number system for keeping books. Real numbers track a single unsigned balance. Complex numbers add a sign (credit and debit), gaining a dimension. Quaternions add ordering (which transaction came first), gaining two more dimensions --- and for a ledger, ordering is essential because the sequence of transactions determines the state. Octonions would add one more doubling, but the books would no longer balance deterministically because the associativity that guarantees well-defined running totals would be gone. Quaternions are the richest system where the books always close.
+
+
+% ============================================================
+\section{Two Axioms, Three Theorems}
+% ============================================================
+
+From $S^3$ as the forced substrate, two axioms determine the complete algebraic structure.
+
+\begin{axiom}[Interaction]
+To exist is to interact. Every property of a datum is defined by its relationships to other data --- a record by its position in a sequence, a measurement by its context, a symbol by its use. An unembedded datum, with no relationships, is operationally identical to nothing.
+\end{axiom}
+
+This axiom yields the Lie bracket $[X, Y] = XY - YX$, the algebraic structure where generators are defined entirely through their interactions. It produces the vector part of the quaternion $(i, j, k)$: three axes, each existing only through interaction with the other two ($i \cdot j = k$, $j \cdot k = i$, $k \cdot i = j$). And it yields the embedding: raw bytes map to $S^3$ via SHA-256 followed by normalization, producing a deterministic, cryptographically secure quaternion for any input. After embedding, the system works only with geometry.
+
+\begin{axiom}[Coherence]
+Equilibrium is the state where all prior interactions have resolved. The identity quaternion $\mathbb{1} = [1, 0, 0, 0]$ is equilibrium --- the unique point equidistant from all states on $S^3$, the geometric representation of ``nothing has accumulated.''
+\end{axiom}
+
+This axiom yields the exponential map $\exp: \mathfrak{su}(2) \to S^3$, the one-way flow from generators to transformations. It produces the scalar part of the quaternion $(w)$: the axis that receives the product of all interactions unidirectionally ($ijk = -1$). And it yields the measure: $\sigma(q) = \arccos(|w(q)|)$, the geodesic distance from $q$ to $\mathbb{1}$. A system at $\sigma = 0$ has resolved all accumulated compositions. The drive toward closure --- reducing $\sigma$ --- is the fundamental dynamic.
+
+Together, the axioms produce the Jacobi identity $[X,[Y,Z]] + [Y,[Z,X]] + [Z,[X,Y]] = 0$, guaranteeing that interactions can refer to each other recursively without generating contradictions --- the algebraic mechanism that prevents the self-referential paradoxes Russell found in set theory. The full quaternion algebra $\mathbb{H}$ emerges: a $3+1$ structure where three symmetric interaction axes (Axiom 1) couple to one directional accumulation axis (Axiom 2) through associativity.
+
+\subsection{Theorem 0: The Zeroth Law --- axis completeness}
+
+\begin{theorem}[Axis Completeness]
+\label{thm:zeroth}
+Coherence between two ordered sequences can break in exactly two orthogonal ways.
+
+A quaternion $q = w + xi + yj + zk$ has two parts under conjugation $q \mapsto \bar{q} = w - xi - yj - zk$: the scalar part $w$ is symmetric (preserved), and the vector part $(x, y, z)$ is antisymmetric (sign-flipped). Any divergence between two compositions lands on one axis or the other:
+
+The \textbf{existence axis} ($W$, scalar, symmetric): something is present in one sequence and absent from the other.
+
+The \textbf{position axis} ($RGB$, vector, antisymmetric): something is present in both sequences at different positions.
+
+These two types are algebraic inverses of each other and exhaustive --- the scalar-vector decomposition is the complete eigendecomposition of conjugation on $\mathbb{H}$.
+\end{theorem}
+
+This theorem precedes the other two because it defines what they measure. The Hopf fibration $S^3 \to S^2 \times S^1$ \cite{hopf1931} makes the decomposition readable: the $S^1$ fiber carries the $W$ channel (existence, luminance --- is the signal on or off?), and the $S^2$ base carries the $RGB$ channels (position, chrominance --- where is the signal pointing?). Every divergence decomposes into some combination of these two, and the decomposition is algebraic.
+
+\subsection{Theorem 1: Exact propagation}
+
+\begin{theorem}[Exact Propagation]
+\label{thm:exact}
+Let $C = g_1 \cdot g_2 \cdots g_n$ be a running product on $S^3$. If any single element $g_k$ is perturbed to $g'_k$ with geodesic distance $d(g_k, g'_k) = \varepsilon$, then $d(C, C') = \varepsilon$, regardless of $n$ or $k$.
+\end{theorem}
+
+\begin{proof}
+Write $C = L \cdot g_k \cdot R$ and $C' = L \cdot g'_k \cdot R$ where $L = g_1 \cdots g_{k-1}$ and $R = g_{k+1} \cdots g_n$. By right-invariance of the bi-invariant metric on $S^3$: $d(L \cdot g_k \cdot R,\; L \cdot g'_k \cdot R) = d(L \cdot g_k,\; L \cdot g'_k)$. By left-invariance: $d(L \cdot g_k,\; L \cdot g'_k) = d(g_k,\; g'_k) = \varepsilon$.
+\end{proof}
+
+A perturbation of magnitude $\varepsilon$ at position 1 in a chain of a billion compositions arrives at the running product as exactly $\varepsilon$. The geometry is perfectly faithful --- every group multiplication is an isometry that preserves distances exactly.
+
+\subsection{Theorem 2: Uniform sensitivity}
+
+\begin{theorem}[Uniform Sensitivity]
+\label{thm:uniform}
+For all positions $k$ in a sequence of length $n$: $\|\partial C / \partial g_k\| = 1$.
+\end{theorem}
+
+\begin{proof}
+$C = L \cdot g_k \cdot R$. The differential $dC/dg_k = dL_L \circ \mathrm{id} \circ dR_R$, where $dL_L$ and $dR_R$ are differentials of left and right multiplication. By bi-invariance, both are isometries. $\|dC/dg_k\| = \|\mathrm{id}\| = 1$.
+\end{proof}
+
+Every position contributes equally. The first element and the billionth are equally detectable from the endpoint, and a perturbation anywhere is visible with the same fidelity.
+
+\subsection{The complete diagnostic}
+
+Theorem 0 tells you \emph{what} broke (existence or position). Theorem 1 tells you \emph{how much} (exact magnitude, preserved through the entire chain). Theorem 2 tells you it is detectable \emph{wherever} it occurred (uniformly across all positions). Together, they form a complete diagnostic for any coherence failure in ordered data.
+
+
+% ============================================================
+\section{The Instruction Set}
+% ============================================================
+
+The Closure Machine operates with nine instructions, each a composition on $S^3$ or a measurement derived from composition.
+
+\textbf{COMPOSE}$(a, b)$: the Hamilton product $a \cdot b$, yielding a new unit quaternion. The core operation --- non-commutative (order matters), associative (grouping irrelevant), producing a result of the same type as its inputs. $O(1)$.
+
+\textbf{INVERT}$(a)$: the quaternion conjugate $\bar{q} = [w, -x, -y, -z]$, such that $q \cdot \bar{q} = \mathbb{1}$. The exact undo.
+
+\textbf{SIGMA}$(a)$: $\arccos(|w(a)|)$, the geodesic distance from $a$ to identity. The coherence thermometer.
+
+\textbf{HOPF}$(a)$: the Hopf fibration \cite{hopf1931}, decomposing $a$ into total distance $\sigma$, base direction $(R, G, B)$ on $S^2$, and phase $W$ on $S^1$. The diagnostic prism.
+
+\textbf{EMBED}(bytes): SHA-256 followed by Box-Muller normalization, producing a deterministic unit quaternion on $S^3$.
+
+\textbf{FETCH}$(q, \text{table})$: resonance query --- find the stored quaternion nearest to $q$ by geodesic distance. Content-addressed retrieval.
+
+\textbf{STORE}$(q, \text{table})$: write a quaternion to the geometric database, updating the table's running product in $O(1)$.
+
+\textbf{EMIT}$(q)$: output a quaternion upward to the next hierarchical level.
+
+\textbf{BRANCH}$(\sigma, \varepsilon)$: if $\sigma < \varepsilon$, the composition has closed --- the program is complete.
+
+Every higher-level operation reduces to compositions of these nine. Comparison is SIGMA(COMPOSE(INVERT$(a)$, $b$)). Diff is COMPOSE(INVERT$(a)$, $b$) --- the gap itself, a quaternion with full geometric information. Verification is SIGMA of the table's running product --- one number, $O(1)$. Localization is binary search on running products, $O(\log n)$. Classification is HOPF of the diff --- $W$-dominant means missing, $RGB$-dominant means reordered.
+
+\subsection{Turing completeness}
+
+I construct an explicit simulation of a Turing machine $M = (Q, \Sigma, \Gamma, \delta, q_0, q_{\text{accept}}, q_{\text{reject}})$ on the Closure Machine.
+
+The tape is a geometric database table where each row stores a quaternion encoding a tape symbol (via EMBED). The state register is a quaternion on $S^3$ --- each state in $Q$ maps to a distinguished quaternion placed at maximally separated positions (for $|Q| \leq 120$, the vertices of the 600-cell, a regular 4-polytope inscribed in $S^3$, suffice; for larger state sets, random unit quaternions with rejection sampling achieve separation $> \pi/(2|Q|)$). The transition function is a second table storing tuples (state, symbol, new\_state, write\_symbol, direction), keyed by COMPOSE(state, symbol).
+
+Each Turing step maps to exactly five Closure Machine instructions: read the current tape cell (FETCH by position), construct the lookup key (COMPOSE of state and symbol), fetch the transition (FETCH by resonance on the transition table), write the new symbol and update state (STORE, COMPOSE), and check for halt (SIGMA of the distance to the accept state, then BRANCH). The simulation is faithful: every configuration of $M$ maps to a unique triple on the Closure Machine, and the transition function is preserved by resonance lookup. The Church-Turing thesis \cite{turing1936, church1936} gives universality.
+
+This construction is deliberately minimal. The architecture supports richer execution modes --- resonance-routed fetch, hierarchical closure, automatic compilation --- that go beyond Turing simulation, but the simulation establishes completeness.
+
+
+% ============================================================
+\section{Architecture}
+% ============================================================
+
+\subsection{Memory: Closure DNA}
+
+Memory is a typed columnar store where every datum can be embedded as a quaternion on $S^3$. The storage format is a directory (\texttt{.cdna/}) containing column files, geometric sidecars (quaternion embeddings for indexed columns), and a header storing the row count and the table identity --- the running product of all row quaternions.
+
+The table identity is 32 bytes. It serves simultaneously as a primary key (uniquely identifying the table's contents and ordering), an integrity proof ($\sigma(\text{identity}) = 0$ iff the table is coherent --- by Theorem 1, any single corruption propagates exactly to this number), and a replication token (exchange 32 bytes to verify two replicas agree, by Theorem 2 every position is equally represented in the running product). The algebra IS the audit trail.
+
+Insertion composes the new element into the running product, $O(1)$. Positional read is a direct offset into the column file, $O(1)$. Content-addressed read is a resonance scan, $O(n)$ brute-force or $O(\log n)$ with genome-accelerated descent. Verification is $\sigma$ of the table identity, $O(1)$. Fault localization is binary search on running products, $O(\log n)$. Fault classification is Hopf decomposition, $O(1)$.
+
+\subsection{Addressing: resonance}
+
+In the von Neumann architecture \cite{vonneumann1945}, memory is addressed by integer location. In the Closure Machine, memory is addressed by content. The fetch operation is a resonance query: given the current state quaternion $q$, find the stored quaternion nearest to $q$ by geodesic distance on $S^3$. The state IS the address.
+
+A single quaternion provides 3 continuous degrees of freedom ($S^3$ is a 3-manifold), yielding approximately 5,000 distinguishable regions at practical numerical resolution --- a 12-bit equivalent. This scales through composite-key addressing: the address becomes a tuple of quaternions, each adding 3 dimensions. Two quaternions give $\sim 2.5 \times 10^7$ regions (24-bit), three give $\sim 1.25 \times 10^{11}$ (36-bit), and $n$ quaternions give the address space of a $12n$-bit bus. The growth is exponential with key width.
+
+This is the mechanism biology uses: gene expression is controlled by multiple transcription factors binding simultaneously, producing combinatorial addressing from a small vocabulary. The genome hierarchy --- self-organized blocks discovered from closure cadence ($\sigma$ minima in the running product) --- provides logarithmic narrowing, reducing resonance search from $O(n)$ to $O(\log n)$ through hierarchical descent analogous to a B-tree index discovered from the data's own compositional structure.
+
+\subsection{Execution: the fetch-execute cycle}
+
+The machine maintains a state quaternion $q_{\text{state}}$, initialized to identity. Execution proceeds in cycles:
+
+\textbf{Fetch}: read the next instruction, either by position (sequential mode --- a program counter, equivalent to von Neumann) or by resonance (the state itself routes to the nearest stored instruction).
+
+\textbf{Execute}: compose the instruction into the state: $q_{\text{state}} \leftarrow q_{\text{state}} \cdot \text{instruction}$.
+
+\textbf{Branch}: measure $\sigma(q_{\text{state}})$. Three outcomes: if $\sigma < \varepsilon$, the composition has closed --- emit the result, reset to identity (the program completed). If $\sigma > \pi/2 - \varepsilon$ (the maximum geodesic distance on $S^3$, since $\sigma = \arccos(|w|) \in [0, \pi/2]$), the composition has reached maximum departure --- the program has failed, halt. Otherwise, continue to the next cycle.
+
+Resonance mode has no classical equivalent. The geometry routes execution, the state itself is the program counter, and the next instruction is whichever stored quaternion is nearest to the current state. There is no integer address, no instruction pointer, no explicit control flow graph.
+
+\subsection{Compilation: closure elements}
+
+A program is a sequence of quaternions $[q_1, q_2, \ldots, q_n]$. Its sequential composition is $C = q_1 \cdot q_2 \cdots q_n$. This single quaternion $C$ is the \textbf{closure element} of the program.
+
+Composing any input state with $C$ produces the same result as composing with the full sequence, because associativity guarantees $\text{state} \cdot q_1 \cdot q_2 \cdots q_n = \text{state} \cdot C$. This is exact --- compilation is one pass ($O(n)$ compositions), the compiled program is 32 bytes, and the algebra guarantees the compiled form reproduces the source.
+
+During execution, whenever the state returns to identity ($\sigma < \varepsilon$), the closure element is stored back to memory. The next time the machine encounters a similar context, resonance fetch retrieves the compiled version. The program library grows as the machine runs, and frequently-executed sequences are automatically replaced by their single-quaternion compiled forms. This is algebraically exact JIT compilation --- no profiling, no optimization heuristics, no separate toolchain.
+
+\subsection{Hierarchy: closure cadence}
+
+The machine generates its own timing. When a level-0 computation closes, its closure element emits upward and becomes an input to level-1. Level-1 composes these emissions and closes on its own cadence. Level-2 composes level-1 closures. The hierarchy emerges from the data's own compositional structure, the same way biological hierarchies (ion channels at milliseconds, synaptic events at tens of milliseconds, neural oscillations at hundreds of milliseconds, brain rhythms at seconds to hours) emerge from the timescales at which subsystems reach equilibrium and emit upward.
+
+\subsection{Self-modification}
+
+Programs and data share the same format (quaternions) and the same memory (DNA tables). STORE can write to any table, including the program table currently being executed. The machine can write new programs discovered during execution (closure events), modify existing programs by composing corrections, and delete programs by composing them to identity. Self-modification is an automatic consequence of programs-as-data applied to the $S^3$ substrate.
+
+
+% ============================================================
+\section{Results}
+% ============================================================
+
+\subsection{Virtual machine tests}
+
+The Closure Machine VM is implemented in 1,661 lines of Rust across five modules (\texttt{primitives}, \texttt{program}, \texttt{machine}, \texttt{hierarchy}, \texttt{lib}). Forty tests validate the architecture across nine categories:
+
+\textbf{Algebra} (7 tests): composition with identity is a no-op, composition with an inverse returns to identity, composition is non-commutative, $\sigma$ at identity is zero, $\sigma$ increases with angle, Hopf decomposition classifies a rotation correctly, decomposition near identity is degenerate.
+
+\textbf{Programs and compilation} (6 tests): a program $[a, a^{-1}]$ closes, transformation maps input to output, sequential execution accumulates correctly, $n$-step program compiled to one quaternion produces identical result, compiled program executes as single compose, append-inverse guarantees closure.
+
+\textbf{Branching} (3 tests): $\sigma < \varepsilon$ triggers closure, $\sigma > \pi/2 - \varepsilon$ triggers death, non-closing programs halt correctly.
+
+\textbf{Registers and addressing} (7 tests): previous register tracks last state, context accumulates across closures, context survives reset, composite key builds correctly at width 1, 2, and 3. Emit updates context and resets state.
+
+\textbf{DNA integration} (6 tests): machine fetches instructions from a real DNA table and closes; two programs with identical state but different previous are differentiated by composite key; closure element written to DNA is fetched back by resonance; program serializes to a key+val table and round-trips exactly; that same table executes correctly via \texttt{run\_resonance} proving content-addressed programs; weighted resonance (\texttt{run\_resonance\_weighted}) produces the same result as uniform addressing at equal weights, confirming the DNA \texttt{search\_composite\_weighted} path is live.
+
+\textbf{Learning and generalization} (3 tests): closure element is reusable as a one-instruction program, learned transform is stored/fetched/executed to produce correct output, new input routed to nearest learned transform produces output in the correct $S^3$ region.
+
+\textbf{Hierarchy} (5 tests): two-level cascade propagates closure elements upward; level-1 composes level-0 closures; a DNA program table attached to a level switches it to resonance mode and the hierarchy still closes correctly; caller-provided \texttt{ResonanceConfig} (key columns, value columns, weights, step budget) is respected --- truncating \texttt{max\_steps} prevents closure and returns \texttt{None}, proving the config is consumed not ignored.
+
+\textbf{Turing completeness} (2 tests): a 3-bit binary counter is simulated as an explicit Turing machine --- tape of three quaternion cells, head, carry logic --- using only COMPOSE, INVERT, SIGMA, FETCH, STORE, and BRANCH; it counts $0 \to 7$ and overflows correctly. A second test repeats the same simulation with a live DNA Table as the tape, running the Machine's fetch/execute/store cycle against real memory. Both pass, realizing the construction in Section~4.1.
+
+\textbf{Persistence} (3 tests): machine registers (state, previous, context) save to a DNA table and restore exactly via \texttt{Machine::state\_table\_schema()}; restoring from an empty table returns an error rather than silently producing garbage; \texttt{run\_resonance} halts gracefully when a matched row's value columns are out of range.
+
+All 40 tests pass.
+
+\subsection{Theorem validation}
+
+Theorem 1 (exact propagation) is verified on $S^1$ (circle group), $S^3$ (sphere group), and $T^5$ (5-torus) with sequence lengths $n \in \{50, 100, 500\}$ and perturbation positions at 0\%, 25\%, 50\%, 75\%, and 99\% of the sequence. All 32 test cases pass within tolerance $10^{-7}$ to $10^{-10}$.
+
+Theorem 2 (uniform sensitivity) is verified by numerical Jacobian computation on $S^1$ and $S^3$ with step size $\delta = 10^{-7}$. Partial derivatives measure at $0.988 \pm 0.03$ across all positions, consistent with the unit norm prediction (the slight deviation from 1.0 on $S^3$ reflects the curvature of the $\arccos$ metric at finite perturbation scale).
+
+Element recovery at arbitrary positions in a 1,000-element sequence achieves errors of $1.39 \times 10^{-16}$ to $2.17 \times 10^{-16}$ --- machine epsilon. Recovery is exact to floating-point precision at every position.
+
+\subsection{Verification benchmarks}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Method & Time & Comparisons & Speedup \\
+\midrule
+Hash chain (linear) & 60.4 ms & 750,001 & 1$\times$ \\
+Merkle tree & 13.1 $\mu$s & 21 & 4,611$\times$ \\
+\textbf{Closure (Oracle)} & \textbf{6.5 $\mu$s} & \textbf{20} & \textbf{9,245$\times$} \\
+\bottomrule
+\end{tabular}
+\caption{Single-fault localization, $n = 10^6$ records.}
+\end{table}
+
+Multi-fault localization ($n = 10^5$, $k = 50$ faults): Merkle trees require $O(k \cdot n)$ (rebuild per fault), 48.4$\times$ slower than Closure's Gilgamesh engine which finds all faults in a single $O(n)$ pass.
+
+The algebraic overhead of the Hamilton product above SHA-256 (which any verification system must pay) is 3--6\%: raw SHA-256 latency is 691--706 ns per element, SDK ingest (SHA-256 + compose) is 725--745 ns.
+
+\subsection{Database benchmarks}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Operation & Closure DNA & SQLite & Ratio \\
+\midrule
+Insert 100K rows & 100.36 ms & 88.27 ms & 1.1$\times$ slower \\
+Get $\times$1000 (positional) & 753.6 $\mu$s & 4.41 ms & \textbf{5.9$\times$ faster} \\
+Integrity check & \textbf{9.5 $\mu$s} & 104.56 ms & \textbf{11,027$\times$ faster} \\
+Filter (indexed bytes) & 713.3 $\mu$s & 7.86 ms & \textbf{11.0$\times$ faster} \\
+Filter (numeric range) & 1.57 ms & 17.07 ms & \textbf{10.9$\times$ faster} \\
+Sort & 3.20 ms & 35.13 ms & \textbf{11.0$\times$ faster} \\
+\bottomrule
+\end{tabular}
+\caption{Closure DNA vs SQLite, 100,000 records, 7 columns.}
+\end{table}
+
+Closure DNA provides two capabilities with no SQLite equivalent: resonance search ($k=5$ nearest quaternions, 47.18 ms) and table identity (32-byte fingerprint of the entire table state, 14.1 $\mu$s).
+
+Storage: Closure DNA uses 4.7 MB data + 20.2 MB geometric sidecars = 26.5 MB total. SQLite uses 6.1 MB with B-tree indexes. The geometric sidecars are the cost of intrinsic verification and content-addressed retrieval --- the space that replaces separate checksum tables, B-tree indexes, and replication metadata.
+
+\subsection{Algebraic precision}
+
+Diff-patch roundtrip on 10,000 records with 500 modifications: roundtrip distance is exactly $0.00 \times 10^0$. Norm stability after 1,000 successive compositions: drift $< 10^{-12}$.
+
+
+% ============================================================
+\section{The Biological Correspondence}
+% ============================================================
+
+The structural parallel between the Closure Machine and biological computation follows from the shared algebraic constraints. Biology composes molecular units sequentially (amino acids into proteins), associatively (the fold depends on the sequence, grouping is irrelevant), non-commutatively (the order of amino acids determines the structure), and compactly (thermodynamic stability requires bounded states). These are the four requirements from Section~2.
+
+A quaternion instruction corresponds to an amino acid --- the atomic unit of a program. A program (quaternion sequence) corresponds to a protein (amino acid sequence). The closure element corresponds to the folded protein structure --- a full sequence of compositions collapsed to a single transformation that determines function. DNA tables correspond to DNA --- programs stored as data. Resonance fetch corresponds to transcription factor binding --- content-addressed program retrieval, where the shape of the transcription factor determines which gene it activates. The fetch-execute cycle corresponds to the ribosome --- the machine that reads mRNA codons one at a time, fetches the corresponding amino acid via tRNA, and appends it to the growing chain.
+
+The addressing layer deserves emphasis. Gene expression is controlled by multiple transcription factors binding simultaneously --- composite-key addressing. This is how 20,000 genes produce millions of distinct expression patterns: combinatorial explosion from a small vocabulary, exactly the exponential scaling of Section~5.2. Biological evolution spent approximately 2 billion years as single cells before multicellularity, and the main innovation was the regulatory network --- the addressing layer --- while the ribosome (the compute engine) has remained essentially unchanged.
+
+Protein misfolding (prion diseases, amyloid plaques) corresponds to programs whose composition never reaches closure ($\sigma$ remains high). Chaperone proteins correspond to programs whose function is to help other compositions close. The immune system's self/non-self distinction corresponds to comparing geometric signatures --- two systems verifying shared identity.
+
+If the correspondence is algebraic, it suggests that biological scaling is an existence proof: life demonstrates that $S^3$ composition scales from single cells to brains with 86 billion neurons. The architecture is proven at scale. It is 3.8 billion years old.
+
+
+% ============================================================
+\section{Discussion}
+% ============================================================
+
+\subsection{What the architecture provides}
+
+The central claim is that the Closure Machine unifies capabilities that require separate infrastructure in existing architectures, from a single algebraic primitive. Integrity verification (von Neumann: checksums, ECC, audit logs) is here $\sigma$ of the composition, free with every operation. Content-addressed memory (von Neumann: hash tables, associative memory \cite{hopfield1982}, learned weight matrices \cite{vaswani2017}) is here a resonance query on $S^3$. Fault classification (von Neumann: manual analysis, heuristics) is here the Hopf decomposition, algebraic and exact. Compilation (von Neumann: separate toolchain) is here the closure element, automatic and exact. Self-timing (von Neumann: crystal oscillator) is here closure cadence. Replication verification (von Neumann: binlog comparison, consensus protocols) is here a 32-byte identity exchange. Distance between programs (von Neumann: undefined) is here the geodesic on $S^3$.
+
+\subsection{Comparison with other models of computation}
+
+The Turing machine \cite{turing1936} establishes the minimum for universality. The Closure Machine is Turing-complete (Section~4.1) and departs in substrate: the tape is geometric, the state is continuous, and the transition function can be content-addressed.
+
+Lambda calculus \cite{church1936} reduces computation to application and substitution. COMPOSE plays the role of application, INVERT the role of abstraction, and the closure element is the $S^3$ analogue of a reduced lambda term. The difference is that distance between terms is defined and meaningful on $S^3$.
+
+Quantum computing operates on the same algebraic group: the single-qubit gate group is $\mathrm{SU}(2) \cong S^3$. Quantum computing uses $\mathrm{SU}(2)$ rotations to manipulate superposition on coherent physical qubits; the Closure Machine uses them to compose ordered data on classical hardware. Whether certain $S^3$ programs can execute on quantum hardware with advantage is open.
+
+Wolfram's ruliad \cite{wolfram2020} is the space of all possible computations from all possible rewrite rules. The Closure Machine can be viewed as a projection of the ruliad onto $S^3$ --- gaining measurement ($\sigma$), classification (Hopf), and invertibility (conjugate), trading graph-level rewrite detail.
+
+\subsection{Limitations}
+
+Geometric sidecars add approximately 4$\times$ storage overhead (Section~6.4). A single quaternion provides approximately 5,000 distinguishable regions; composite-key addressing scales exponentially but adds fetch complexity. Brute-force resonance is $O(n)$; genome descent reduces it to $O(\log n)$ but requires preprocessing. The security rests on SHA-256 preimage resistance and the non-commutative factorization problem on $\mathrm{SU}(2)$, for which no formal reduction to established hard problems is provided. IEEE 754 norm drift is controlled to $< 10^{-12}$ over $10^3$ compositions; longer chains may require periodic renormalization.
+
+\subsection{Open questions}
+
+The Hamilton product is 28 FMAs per quaternion pair --- a natural GPU kernel via non-commutative parallel prefix-sum. Can the completeness argument be formalized in Lean or Coq? Is there a Shannon-like capacity theorem for resonance-addressed memory on $S^3$? Can the architecture simulate protein folding or gene regulation with advantage, given the shared $\mathrm{SU}(2)$ structure? The relationship between resonance queries and attention mechanisms \cite{vaswani2017} is unexplored.
+
+
+% ============================================================
+\section{Implementation}
+% ============================================================
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}llrl@{}}
+\toprule
+Component & Language & LOC & Purpose \\
+\midrule
+\texttt{closure\_rs} & Rust & 8,195 & Core algebra, groups, DNA engine \\
+\texttt{closure\_vm} & Rust & 1,661 & Virtual machine: fetch-execute cycle \\
+\texttt{closure\_sdk} & Python & 1,374 & Primitives, lenses, canonicals \\
+\texttt{closure\_dna} & Python & $\sim$3,500 & Database: tables, queries, transactions \\
+\texttt{closure\_ea} & Python/Rust & $\sim$2,000 & Learning architecture (experimental) \\
+\texttt{closure\_cli} & Python & $\sim$500 & Command-line interface \\
+\bottomrule
+\end{tabular}
+\caption{Implementation components.}
+\end{table}
+
+Test suite: 54 Rust unit tests, 207 Python SDK tests, 75 Python DNA tests, 40 VM tests. Total: 376, all passing.
+
+The Hamilton product is 8 multiplications and 4 additions per composition, following standard quaternion arithmetic \cite{hamilton1843, shoemake1985}, with normalization after each product to prevent drift. Embedding supports three modes: cryptographic (SHA-256 $\to$ Box-Muller $\to$ $S^3$, collision-resistant), geometric (byte-rotation table, similarity-preserving), and numeric (IEEE-754 bit extraction, order-preserving). The Rust core exposes Python bindings via PyO3 (2,165 lines).
+
+The implementation is available at \url{https://github.com/faltz009/closure-verification}.
+
+
+% ============================================================
+\section{Conclusion}
+% ============================================================
+
+This paper has presented a general-purpose computer in which every operation arises from ordered composition on $S^3$. The architecture is Turing-complete (Section~4.1), self-verifying (Theorems 1--2 and the Zeroth Law), self-compiling (Section~5.4), self-timing (Section~5.5), and content-addressed (Section~5.2). These properties emerge from the algebra of unit quaternions on a compact manifold forced by Hurwitz's theorem.
+
+The implementation passes 376 tests across the full stack. Benchmarks show 11,027$\times$ faster integrity checking than SQLite, 9,245$\times$ faster fault localization than hash chains, and 3--6\% overhead above the SHA-256 cost that any verification system must pay. The architecture maps onto biological computation at every level because biology is subject to the same four requirements that force $S^3$.
+
+The general computer works. The programs are quaternions. The memory is geometric. The trust is free.
+
+
+% ============================================================
+\section*{Methodology}
+% ============================================================
+
+A prototype paper was generated by Claude Code (Anthropic) from the repository's source code and test results. This publication was rewritten by the author in collaboration with Claude Opus 4.6, operating as a writing and verification tool. The author provided the architecture, the implementation, the theoretical content, and the editorial judgment at every stage. Claude provided drafting, proof organization, and \LaTeX\ preparation.
+
+The axioms, the instruction set, the closure-as-compilation result, the resonance addressing mechanism, the biological correspondence, the Closure DNA database engine, and the Rust/Python implementation are the author's contributions.
+
+
+% ============================================================
+\begin{thebibliography}{12}
+
+\bibitem{vonneumann1945}
+Von Neumann, J. (1945). First draft of a report on the EDVAC. \textit{University of Pennsylvania}.
+
+\bibitem{hurwitz1898}
+Hurwitz, A. (1898). \"{U}ber die Composition der quadratischen Formen von beliebig vielen Variablen. \textit{Nachr.\ Ges.\ Wiss.\ G\"{o}ttingen}, 309--316.
+
+\bibitem{hamilton1843}
+Hamilton, W.R. (1843). On quaternions; or on a new system of imaginaries in algebra. \textit{Philosophical Magazine}, 25(3), 489--495.
+
+\bibitem{hopf1931}
+Hopf, H. (1931). \"{U}ber die Abbildungen der dreidimensionalen Sph\"{a}re auf die Kugelfl\"{a}che. \textit{Math.\ Ann.}, 104(1), 637--665.
+
+\bibitem{turing1936}
+Turing, A.M. (1936). On computable numbers, with an application to the Entscheidungsproblem. \textit{Proc.\ Lond.\ Math.\ Soc.}, s2-42(1), 230--265.
+
+\bibitem{church1936}
+Church, A. (1936). An unsolvable problem of elementary number theory. \textit{Am.\ J.\ Math.}, 58(2), 345--363.
+
+\bibitem{hopfield1982}
+Hopfield, J.J. (1982). Neural networks and physical systems with emergent collective computational abilities. \textit{PNAS}, 79(8), 2554--2558.
+
+\bibitem{vaswani2017}
+Vaswani, A., et al. (2017). Attention is all you need. \textit{NeurIPS}, 30.
+
+\bibitem{wolfram2020}
+Wolfram, S. (2020). A class of models with the potential to represent fundamental physics. \textit{Complex Systems}, 29(2).
+
+\bibitem{shoemake1985}
+Shoemake, K. (1985). Animating rotation with quaternion curves. \textit{ACM SIGGRAPH}, 19(3), 245--254.
+
+\end{thebibliography}
+
+\vspace{1em}
+\noindent\rule{\textwidth}{0.4pt}
+
+\noindent\textbf{License.} This paper: CC BY-NC-SA 4.0. The Closure SDK and all code: AGPL-3.0. Commercial licensing available from the author.
+
+\noindent\copyright\ 2026 Walter Henrique Alves da Silva.
+
+\end{document}

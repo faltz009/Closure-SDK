@@ -1610,98 +1610,6 @@ fn train_continuous<'py>(
     Ok(result.into())
 }
 
-/// Run Trinity's complete S1/S2/S3 cycle on streams of events. Entirely in Rust.
-///
-/// The complete cycle per tick:
-///   Reality → S1×S3 → Perception → S2×S3 → Prediction → S1 → Reality
-///   → Response → S1 → Evaluation → Write S3
-///
-/// Per-(event, S2_context) transformations stored in a HashMap.
-/// S2's hierarchical identity (compose across active levels) determines context.
-/// Fiber-aware Hopf correction: W on S¹, RGB slerped on S².
-/// S3 as real lattice (closures, level spawning).
-/// Flush clears prediction state (no cross-boundary evaluation).
-///
-/// Args:
-///   genome: (G × 4) event positions on S³ — S1's fixed adapter (set externally, not learned here)
-///   events: flat i32 array of event indices into genome
-///   task_lengths: i32 array — length of each task's stream (flush between tasks)
-///   epsilon_s2: closure threshold for S2 lattice
-///   epsilon_s3: closure threshold for S3 lattice
-///   damping: learning rate for T geodesic correction
-///   max_depth: max lattice depth for S2 and S3
-///   n_passes: replay all tasks this many times
-///   n_colors: number of tokens to score at decode (first n_colors genome entries)
-///   m_factors: parallel S2 lattices (default 1)
-///   max_genome_entries: hard cap on TGenome size
-///
-/// Returns: (predictions, genome_dump, prediction_distances)
-///   predictions: (N,) i32 — predicted next-event index per tick
-///   genome_dump: flat f64 — 4 floats per learned T entry
-///   prediction_distances: flat f64 — n_colors geodesic distances per tick
-#[pyfunction]
-#[pyo3(signature = (genome, events, task_lengths, epsilon_s2, epsilon_s3, damping, max_depth, n_passes, n_colors=10, m_factors=1, max_genome_entries=65536, attend_k=1, attend_temperature=0.1, attend_depth=1))]
-fn run_trinity<'py>(
-    py: Python<'py>,
-    mut genome: numpy::PyReadwriteArray2<'py, f64>,
-    events: PyReadonlyArray1<i32>,
-    task_lengths: PyReadonlyArray1<i32>,
-    epsilon_s2: f64,
-    epsilon_s3: f64,
-    damping: f64,
-    max_depth: usize,
-    n_passes: usize,
-    n_colors: usize,
-    m_factors: usize,
-    max_genome_entries: usize,
-    attend_k: usize,
-    attend_temperature: f64,
-    attend_depth: usize,
-) -> PyResult<Bound<'py, pyo3::types::PyTuple>> {
-    use crate::trinity::{self, TrinityConfig};
-
-    let events_data = events.as_slice().map_err(|_| PyValueError::new_err("events not contiguous"))?;
-    let task_lens = task_lengths.as_slice().map_err(|_| PyValueError::new_err("task_lengths not contiguous"))?;
-    let genome_data = genome.as_array();
-    let n_genome = genome_data.shape()[0];
-
-    let mut genome_vec: Vec<[f64; 4]> = Vec::with_capacity(n_genome);
-    for i in 0..n_genome {
-        genome_vec.push([genome_data[[i,0]], genome_data[[i,1]],
-                         genome_data[[i,2]], genome_data[[i,3]]]);
-    }
-
-    let config = TrinityConfig {
-        epsilon_s2, epsilon_s3, damping, max_depth, n_passes,
-        n_colors, m_factors, max_genome_entries, attend_k, attend_temperature,
-        attend_depth,
-    };
-
-    let result = trinity::run_trinity(&mut genome_vec, events_data, task_lens, &config);
-
-    // Write mutated genome positions back to numpy array.
-    {
-        let mut genome_mut = genome.as_array_mut();
-        for i in 0..n_genome {
-            genome_mut[[i,0]] = genome_vec[i][0];
-            genome_mut[[i,1]] = genome_vec[i][1];
-            genome_mut[[i,2]] = genome_vec[i][2];
-            genome_mut[[i,3]] = genome_vec[i][3];
-        }
-    }
-
-    // genome_dump: flat n×4 T-transforms (4 floats per entry).
-    // context_keys_dump: flat n×4 context keys (paired with transforms).
-    let preds_arr = PyArray1::from_vec(py, result.predictions);
-    let t_arr = PyArray1::from_vec(py, result.genome_dump);
-    let dist_arr = PyArray1::from_vec(py, result.prediction_distances);
-    let ck_arr = PyArray1::from_vec(py, result.context_keys_dump);
-    let out = pyo3::types::PyTuple::new(py, &[
-        preds_arr.into_any(), t_arr.into_any(), dist_arr.into_any(), ck_arr.into_any(),
-    ])?;
-    Ok(out.into())
-}
-
 // ── Resonance Query ─────────────────────────────────────────────────
 // The 8th primitive. Content-addressable retrieval on S³.
 // Given a query element and a GeometricPath, find the stored elements
@@ -1891,6 +1799,48 @@ impl PyTable {
             .map_err(|e| PyValueError::new_err(format!("build_genome failed: {e}")))
     }
 
+    #[pyo3(signature = (name = None))]
+    fn snapshot(&mut self, name: Option<String>) -> PyResult<String> {
+        self.inner
+            .snapshot(name.as_deref())
+            .map_err(|e| PyValueError::new_err(format!("snapshot failed: {e}")))
+    }
+
+    #[pyo3(signature = (limit = None))]
+    fn history_json(&self, limit: Option<usize>) -> PyResult<Vec<String>> {
+        let entries = self
+            .inner
+            .history(limit)
+            .map_err(|e| PyValueError::new_err(format!("history failed: {e}")))?;
+        entries
+            .into_iter()
+            .map(|entry| {
+                serde_json::to_string(&entry)
+                    .map_err(|e| PyValueError::new_err(format!("history serialize failed: {e}")))
+            })
+            .collect()
+    }
+
+    fn snapshots_json(&self) -> PyResult<Vec<String>> {
+        let snapshots = self
+            .inner
+            .snapshots()
+            .map_err(|e| PyValueError::new_err(format!("snapshots failed: {e}")))?;
+        snapshots
+            .into_iter()
+            .map(|snap| {
+                serde_json::to_string(&snap)
+                    .map_err(|e| PyValueError::new_err(format!("snapshot serialize failed: {e}")))
+            })
+            .collect()
+    }
+
+    fn restore_snapshot(&mut self, name: String) -> PyResult<()> {
+        self.inner
+            .restore_snapshot(&name)
+            .map_err(|e| PyValueError::new_err(format!("restore_snapshot failed: {e}")))
+    }
+
     fn genome_depth(&mut self) -> PyResult<usize> {
         self.inner.genome_depth()
             .map_err(|e| PyValueError::new_err(format!("genome_depth failed: {e}")))
@@ -2068,6 +2018,16 @@ impl PyTable {
         self.inner.count()
     }
 
+    fn live_row_count(&self) -> usize {
+        self.inner.live_row_count()
+    }
+
+    fn is_deleted(&self, row: usize) -> PyResult<bool> {
+        self.inner
+            .is_deleted(row)
+            .map_err(|e| PyValueError::new_err(format!("is_deleted failed: {e}")))
+    }
+
     /// Save to disk.
     fn save(&mut self) -> PyResult<()> {
         self.inner
@@ -2160,7 +2120,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(build_info, m)?)?;
     m.add_function(wrap_pyfunction!(train_cells, m)?)?;
     m.add_function(wrap_pyfunction!(train_continuous, m)?)?;
-    m.add_function(wrap_pyfunction!(run_trinity, m)?)?;
     m.add_function(wrap_pyfunction!(resonance_query, m)?)?;
     m.add_function(wrap_pyfunction!(resonance_query_raw, m)?)?;
     m.add_class::<PyGroup>()?;

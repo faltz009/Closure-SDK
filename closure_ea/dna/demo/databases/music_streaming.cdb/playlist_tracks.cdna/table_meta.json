@@ -1,0 +1,38 @@
+[
+  {
+    "name": "playlist_track_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": true,
+    "references": null,
+    "not_null": true,
+    "unique": true
+  },
+  {
+    "name": "playlist_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": false,
+    "references": "playlists.playlist_id",
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "track_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": false,
+    "references": "tracks.track_id",
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "position",
+    "type": "i64",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  }
+]

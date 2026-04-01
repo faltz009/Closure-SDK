@@ -1,0 +1,83 @@
+[
+  {
+    "name": "track_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": true,
+    "references": null,
+    "not_null": true,
+    "unique": true
+  },
+  {
+    "name": "album_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": false,
+    "references": "albums.album_id",
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "artist_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": false,
+    "references": "artists.artist_id",
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "title",
+    "type": "bytes",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "duration_sec",
+    "type": "i64",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "energy",
+    "type": "f64",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "danceability",
+    "type": "f64",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "mood",
+    "type": "f64",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "genre",
+    "type": "bytes",
+    "indexed": true,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  }
+]

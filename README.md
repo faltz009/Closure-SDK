@@ -251,14 +251,13 @@ This is a building block — you embed it in the systems you already run. If you
 
 | Path | What it is |
 |---|---|
-| `closure_cli/` | The CLI — identity, observer, seeker |
-| `closure_sdk/` | The SDK — 22 symbols, four layers |
-| `closure_rs/` | The engine — Rust core with Python bindings |
-| `rust/` | Rust source for the engine |
-| `tests/` | 207 tests — SDK algebra, convergence, streaming, binding, CLI integration |
-| `benchmarks/` | Head-to-head against SHA-256, hash chains, and Merkle trees |
-| `examples/` | Worked examples: drift detection, incident classification, streaming, binding, channels |
-| `closure_ea/` | What happens when you teach a neural network to compose on S³ instead of ℝⁿ. Start here if you're curious where this goes next |
+| `closure_sdk/` | `pip install closure-sdk` — the SDK package, with its own `pyproject.toml` and tests |
+| `closure_ea/dna/` | `pip install closure-dna` — the database package, with its own tests, benchmarks, and demo |
+| `closure_cli/` | CLI surface included in the SDK build |
+| `closure_ea/` | `pip install closure-ea` — the learning/runtime package, with its own tests |
+| `closure_rs/` | Shared Python bindings for the Rust engine |
+| `rust/` | Shared Rust core |
+| `tests/` | Root guardrails for the workspace |
 | `CLOSURE_SDK.md` | Full technical documentation — theory, architecture, complete API reference |
 | `CLOSURE_CLI.md` | CLI documentation — all three commands, options, output formats, architecture |
 | `zeroth_law_full-1.pdf` | The paper — [Zenodo](https://zenodo.org/records/19140055) |
@@ -297,7 +296,10 @@ These are theorems, not heuristics. Full proofs are in `CLOSURE_SDK.md`. The fou
 ## Tests
 
 ```bash
-pytest tests/ -q   # 207 tests
+pytest tests -q
+pytest closure_sdk/tests -q
+pytest closure_ea/dna/tests -q
+pytest closure_ea/tests -q
 ```
 
 ## Support

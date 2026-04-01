@@ -71,7 +71,7 @@ class DriveChannel:
 class World:
     """The grid world. Enkidu, home, food sources, drives."""
 
-    def __init__(self, grid_size=15, hunger_rate=0.04, food_spawn_rate=0.05):
+    def __init__(self, grid_size=15, hunger_rate=0.04, food_spawn_rate=0.0):
         self.grid_size = grid_size
         self.hunger_rate = hunger_rate
         self.food_spawn_rate = food_spawn_rate  # probability per tick

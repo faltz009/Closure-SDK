@@ -53,7 +53,11 @@ build-backend = "maturin"
 [tool.maturin]
 manifest-path = "rust/Cargo.toml"
 features = ["pyo3/extension-module"]
-python-packages = ["closure_sdk", "closure_cli", "closure_rs"]
+python-packages = ["closure_sdk", "closure_cli", "closure_rs", "closure_ea"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = [
+    "tests",
+    "closure_sdk/tests",
+    "closure_ea/dna/tests",
+]

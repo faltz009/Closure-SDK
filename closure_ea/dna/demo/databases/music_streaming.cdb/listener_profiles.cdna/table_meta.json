@@ -1,0 +1,92 @@
+[
+  {
+    "name": "user_id",
+    "type": "i64",
+    "indexed": false,
+    "primary": true,
+    "references": "users.user_id",
+    "not_null": true,
+    "unique": true
+  },
+  {
+    "name": "indie_affinity",
+    "type": "f64",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "pop_affinity",
+    "type": "f64",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "electronic_affinity",
+    "type": "f64",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "hiphop_affinity",
+    "type": "f64",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "jazz_affinity",
+    "type": "f64",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "latin_affinity",
+    "type": "f64",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "focus_affinity",
+    "type": "f64",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "energy_affinity",
+    "type": "f64",
+    "indexed": false,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  },
+  {
+    "name": "city",
+    "type": "bytes",
+    "indexed": true,
+    "primary": false,
+    "references": null,
+    "not_null": false,
+    "unique": false
+  }
+]

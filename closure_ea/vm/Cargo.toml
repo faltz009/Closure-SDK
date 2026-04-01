@@ -1,0 +1,9 @@
+[package]
+name = "closure-vm"
+version = "0.1.0"
+edition = "2021"
+description = "S³ Virtual Machine — general-purpose computer from ordered composition"
+license = "AGPL-3.0-only"
+
+[dependencies]
+closure-rs = { path = "../../rust" }

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>What the future holds — Closure</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="has-ribbon">
+
+<div id="ribbon-bg"></div>
+
+<nav class="site-nav" aria-label="Site navigation">
+  <a class="nav-home" href="index.html">Closure</a>
+  <span class="nav-sep">/</span>
+  <a href="origin.html">How we got here</a>
+  <span class="nav-dot">•</span>
+  <a href="stack.html">Where we are</a>
+  <span class="nav-dot">•</span>
+  <a href="horizon.html" aria-current="page">What the future holds</a>
+  <span class="nav-dot">•</span>
+  <a href="supporting-models.html">Supporting Models</a>
+  <span class="nav-sep">/</span>
+  <a href="support.html">Support</a>
+  <span class="nav-dot">•</span>
+  <a href="collaborate.html">Collaborate</a>
+  <span class="nav-dot">•</span>
+  <a href="newsletter.html">Newsletter</a>
+  <span class="nav-sep">/</span>
+  <a href="about.html">About</a>
+</nav>
+
+<main>
+  <div class="article">
+    <h1>What the future holds</h1>
+
+    <p>
+      If the algebraic primitive becomes the standard, several things change at once.
+      Not incrementally. Structurally.
+    </p>
+
+    <h3>The architecture is post-von Neumann</h3>
+    <p>
+      In a von Neumann machine, data and instructions are separate objects. State
+      is an address. Memory is passive. Closure reverses this: the state <em>is</em>
+      the composition product. Memory operates on itself. Programs and data share
+      the same representation, because they are the same kind of thing. Integrity
+      is not checked afterward &mdash; it is native to the structure.
+    </p>
+
+    <p>
+      This is not a theoretical observation. It describes the stack as it exists
+      today: the verification layer, the database, and the learning kernel are all
+      expressions of the same algebraic object. They did not need to be glued
+      together; they were never separate.
+    </p>
+
+    <h3>The path to hardware is clear</h3>
+    <p>
+      Unit quaternion composition is fixed-width, branch-free, and parallelizable.
+      There is no reason it cannot be a hardware primitive. A chip that does closure
+      arithmetic natively would make verification free at the silicon level, memory
+      algebraic by default, and attention computable without matrix multiplication.
+      This is not speculative &mdash; it is a direct translation of the math to
+      silicon.
+    </p>
+
+    <p>
+      The timeline on this is weeks of focused development, not years. The
+      architecture is defined. The primitives are validated. What remains is
+      engineering.
+    </p>
+
+    <h3>Local transformers become tractable</h3>
+    <p>
+      One of the central costs of modern language models is attention &mdash; the
+      O(n&sup2;) mechanism that compares every token to every other. Closure
+      computes the same operation geometrically: compose, measure distance from
+      identity, act on the largest. That is algebraically equivalent at a fraction
+      of the cost. A cellphone-sized transformer becomes a real possibility when
+      attention is a composition product rather than a matrix multiplication.
+    </p>
+
+    <p>
+      This is one concrete path to making frontier-level intelligence local,
+      private, and cheap. No server. No API. No dependency.
+    </p>
+
+    <h3>Trustless communication and storage at scale</h3>
+    <p>
+      Efficient, cryptographic, algebraically composable verification between
+      systems is the foundation of distributed coordination. The verification
+      primitive already does this. Scaled up: distributed ledgers with algebraic
+      summaries rather than hash chains, self-organized agent swarms where every
+      node maintains closure with every other, networks where agreement is
+      geometric rather than consensus-based.
+    </p>
+
+    <p>
+      The supporting literature in the repository already identifies these
+      directions independently &mdash; hyperagents, sheaf-based distributed
+      learning, evolutionary optimization at scale. The Closure geometry
+      sits where they converge.
+    </p>
+
+    <h3>One object, all the way down</h3>
+    <p>
+      The deepest frame is this: representation, memory, verification, retrieval,
+      and execution do not need to be separate kinds of objects. They are separate
+      now because we inherited that architecture. There is no technical reason
+      they have to stay that way.
+    </p>
+
+    <p>
+      A MacBook is a general computer. A cellphone is a general computer. A
+      transformer counts as one. What is being built here is a new class of
+      general computer &mdash; one where the primitive is not a register or a
+      floating-point operation but a composition on a sphere.
+    </p>
+
+    <p style="margin-top: 1.8em;">
+      <a href="collaborate.html">If this interests you &rarr;</a>
+    </p>
+  </div>
+</main>
+
+<footer>
+  <a href="https://zenodo.org/records/19140055" target="_blank" rel="noopener">Paper (Zenodo)</a>
+  <a href="https://github.com/faltz009/Closure-SDK" target="_blank" rel="noopener">GitHub</a>
+  <a href="enkidu.html">Enkidu demo</a>
+</footer>
+
+<div class="ori-badge">
+  <div class="ori-badge-ring"><canvas id="ori-canvas"></canvas></div>
+  <span class="ori-badge-label">Open Research Institute</span>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+<script src="ribbon.js"></script>
+<script src="shatter.js"></script>
+</body>
+</html>
