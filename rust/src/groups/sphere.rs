@@ -115,6 +115,30 @@ impl LieGroup for SphereGroup {
     }
 }
 
+// ── Standalone [f64; 4] functions for direct use by closure_vm ──────
+
+pub const IDENTITY: [f64; 4] = [1.0, 0.0, 0.0, 0.0];
+
+/// Hamilton product + normalize. Standalone, no trait dispatch.
+#[inline]
+pub fn sphere_compose(a: &[f64; 4], b: &[f64; 4]) -> [f64; 4] {
+    let mut q = hamilton(a, b);
+    normalize(&mut q);
+    q
+}
+
+/// Conjugate = inverse for unit quaternions.
+#[inline]
+pub fn sphere_inverse(a: &[f64; 4]) -> [f64; 4] {
+    [a[0], -a[1], -a[2], -a[3]]
+}
+
+/// Geodesic distance from identity on S³: arccos(|w|).
+#[inline]
+pub fn sphere_sigma(a: &[f64; 4]) -> f64 {
+    a[0].abs().clamp(0.0, 1.0).acos()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

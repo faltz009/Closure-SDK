@@ -1,0 +1,41 @@
+[project]
+name = "closure-dna"
+version = "0.1.0"
+description = "Geometric columnar database on S³ — identity, integrity, and resonance search built in"
+readme = "README.md"
+license = "AGPL-3.0-only"
+requires-python = ">=3.10"
+authors = [
+    {name = "Walter Henrique Alves da Silva", email = "walter.h057@gmail.com"}
+]
+keywords = ["database", "quaternion", "integrity", "columnar", "geometric"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+]
+dependencies = ["numpy>=1.24", "sqlglot>=30.1.0"]
+
+[project.scripts]
+closure-dna = "closure_dna.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.urls]
+Homepage = "https://github.com/faltz009/Closure-SDK"
+Repository = "https://github.com/faltz009/Closure-SDK"
+
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[tool.maturin]
+manifest-path = "../rust/Cargo.toml"
+features = ["pyo3/extension-module"]
+python-packages = ["closure_dna", "closure_rs"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

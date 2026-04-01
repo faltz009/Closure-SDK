@@ -55,9 +55,10 @@
 //! sigma = mon.sigma()
 //! ```
 
-use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray2, PyUntypedArrayMethods};
+use numpy::{PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2, PyUntypedArrayMethods};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+use pyo3::types::{PyAny, PyBytes};
 
 use crate::groups::circle::CircleGroup;
 use crate::groups::hybrid::HybridGroup;
@@ -733,7 +734,7 @@ impl PyHierarchicalClosure {
 }
 
 // ── Full-pipeline helpers ────────────────────────────────────────────
-// These run the entire pipeline (raw bytes -> embed -> compose)
+// These run the entire pipeline (raw bytes → embed → compose)
 // in Rust. No per-element round-trip to Python.
 
 /// Build a GeometricPath from raw byte records — full pipeline in Rust.
@@ -1251,6 +1252,897 @@ fn build_info() -> (&'static str, &'static str) {
 // ── Module registration ─────────────────────────────────────────────
 
 /// Register all Python-visible functions and classes.
+/// Train a cell classifier on S³ via algebraic correction — ENTIRELY IN RUST.
+///
+/// Each cell has N_FEAT feature indices into a genome table.
+/// The composition of feature quaternions should land near the target quaternion.
+/// For each cell: compose features, compute error via Hopf, do ideal_i correction.
+///
+/// Args:
+///   genome: (G × 4) mutable array of quaternion positions (modified in place)
+///   cells: (C × N_FEAT) array of feature indices (into genome rows)
+///   targets: (C × 4) array of target quaternions
+///   n_epochs: number of training passes
+///   damping: learning rate
+///   seed: random seed for shuffle
+///
+/// Returns: training accuracy (fraction correct)
+#[pyfunction]
+#[pyo3(signature = (genome, cells, targets, n_epochs, damping, seed=42))]
+fn train_cells<'py>(
+    _py: Python<'py>,
+    mut genome: numpy::PyReadwriteArray2<'py, f64>,
+    cells: PyReadonlyArray2<i32>,
+    targets: PyReadonlyArray2<f64>,
+    n_epochs: usize,
+    damping: f64,
+    seed: u64,
+) -> PyResult<f64> {
+    let cells_data = cells.as_array();
+    let targets_data = targets.as_array();
+    let n_cells = cells_data.shape()[0];
+    let n_feat = cells_data.shape()[1];
+    let mut genome_data = genome.as_array_mut();
+    let n_genome = genome_data.shape()[0];
+
+    // Inline Hamilton product (no allocation)
+    #[inline(always)]
+    fn ham(a: &[f64; 4], b: &[f64; 4]) -> [f64; 4] {
+        [a[0]*b[0]-a[1]*b[1]-a[2]*b[2]-a[3]*b[3],
+         a[0]*b[1]+a[1]*b[0]+a[2]*b[3]-a[3]*b[2],
+         a[0]*b[2]-a[1]*b[3]+a[2]*b[0]+a[3]*b[1],
+         a[0]*b[3]+a[1]*b[2]-a[2]*b[1]+a[3]*b[0]]
+    }
+
+    #[inline(always)]
+    fn norm(q: &mut [f64; 4]) {
+        let n = (q[0]*q[0]+q[1]*q[1]+q[2]*q[2]+q[3]*q[3]).sqrt();
+        if n > 1e-15 { let inv = 1.0/n; q[0]*=inv; q[1]*=inv; q[2]*=inv; q[3]*=inv; }
+        else { *q = [1.0, 0.0, 0.0, 0.0]; }
+    }
+
+    #[inline(always)]
+    fn inv(a: &[f64; 4]) -> [f64; 4] { [a[0], -a[1], -a[2], -a[3]] }
+
+    #[inline(always)]
+    fn compose(a: &[f64; 4], b: &[f64; 4]) -> [f64; 4] {
+        let mut r = ham(a, b); norm(&mut r); r
+    }
+
+    // LCG for shuffling
+    let mut rng = seed;
+    let mut next = || -> u64 {
+        rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        rng
+    };
+
+    let mut order: Vec<usize> = (0..n_cells).collect();
+
+    for _epoch in 0..n_epochs {
+        // Shuffle
+        for i in (1..n_cells).rev() {
+            let j = (next() as usize) % (i + 1);
+            order.swap(i, j);
+        }
+
+        for &idx in &order {
+            let mut feat_idx = vec![0usize; n_feat];
+            for i in 0..n_feat {
+                let fi = cells_data[[idx, i]] as usize;
+                feat_idx[i] = if fi < n_genome { fi } else { 0 };
+            }
+
+            let target: [f64; 4] = [targets_data[[idx,0]], targets_data[[idx,1]],
+                                     targets_data[[idx,2]], targets_data[[idx,3]]];
+
+            // Read quats from genome
+            let mut quats = vec![[0.0f64; 4]; n_feat];
+            for i in 0..n_feat {
+                let fi = feat_idx[i];
+                quats[i] = [genome_data[[fi,0]], genome_data[[fi,1]],
+                            genome_data[[fi,2]], genome_data[[fi,3]]];
+            }
+
+            // Compose
+            let mut c = [1.0, 0.0, 0.0, 0.0];
+            for i in 0..n_feat { c = compose(&c, &quats[i]); }
+
+            // Error
+            let eq = compose(&c, &inv(&target));
+            let es = eq[0].abs().min(1.0).acos();
+            if es < 1e-6 { continue; }
+
+            let w_mag = eq[0].abs();
+            let rgb_mag = (eq[1]*eq[1]+eq[2]*eq[2]+eq[3]*eq[3]).sqrt();
+            let tf = if w_mag > rgb_mag { 1.0 } else { 0.5 };
+            let step = damping * (es / std::f64::consts::PI) * tf;
+
+            // Left products
+            let mut left = vec![[1.0, 0.0, 0.0, 0.0]; n_feat + 1];
+            for i in 0..n_feat { left[i+1] = compose(&left[i], &quats[i]); }
+
+            // Right products
+            let mut right = vec![[1.0, 0.0, 0.0, 0.0]; n_feat + 1];
+            for i in (0..n_feat).rev() { right[i] = compose(&quats[i], &right[i+1]); }
+
+            // Correct each feature
+            for i in 0..n_feat {
+                let ideal = compose(&compose(&inv(&left[i]), &target), &inv(&right[i+1]));
+                let fi = feat_idx[i];
+                let pos: [f64; 4] = [genome_data[[fi,0]], genome_data[[fi,1]],
+                                      genome_data[[fi,2]], genome_data[[fi,3]]];
+
+                let mut dot = pos[0]*ideal[0]+pos[1]*ideal[1]+pos[2]*ideal[2]+pos[3]*ideal[3];
+                let ideal_adj = if dot < 0.0 { dot = -dot; [-ideal[0],-ideal[1],-ideal[2],-ideal[3]] } else { ideal };
+
+                if dot > 0.9999 {
+                    for d in 0..4 { genome_data[[fi, d]] = ideal_adj[d]; }
+                } else {
+                    let theta = dot.min(1.0).acos();
+                    let s = theta.sin();
+                    if s > 1e-8 {
+                        let a = ((1.0-step)*theta).sin()/s;
+                        let b = (step*theta).sin()/s;
+                        let mut np = [a*pos[0]+b*ideal_adj[0], a*pos[1]+b*ideal_adj[1],
+                                      a*pos[2]+b*ideal_adj[2], a*pos[3]+b*ideal_adj[3]];
+                        norm(&mut np);
+                        for d in 0..4 { genome_data[[fi, d]] = np[d]; }
+                    }
+                }
+            }
+        }
+    }
+
+    // Training accuracy: compose each cell, dot with its target
+    let mut correct = 0usize;
+    for idx in 0..n_cells {
+        let mut c = [1.0, 0.0, 0.0, 0.0];
+        for i in 0..n_feat {
+            let fi = cells_data[[idx, i]] as usize;
+            let fi = if fi < n_genome { fi } else { 0 };
+            let q: [f64; 4] = [genome_data[[fi,0]], genome_data[[fi,1]],
+                                genome_data[[fi,2]], genome_data[[fi,3]]];
+            c = compose(&c, &q);
+        }
+        let t: [f64; 4] = [targets_data[[idx,0]], targets_data[[idx,1]],
+                            targets_data[[idx,2]], targets_data[[idx,3]]];
+        let dot = (c[0]*t[0]+c[1]*t[1]+c[2]*t[2]+c[3]*t[3]).abs();
+        if dot > 0.5 { correct += 1; }
+    }
+
+    Ok(correct as f64 / n_cells.max(1) as f64)
+}
+
+/// Train on continuous features via algebraic correction on S³.
+///
+/// Each continuous feature value becomes a quaternion rotation:
+///   q = [cos(θ/2), sin(θ/2) * axis]
+///   where θ = feature_value (pre-scaled by caller)
+///   and axis = learned 3-vector (one per feature, stored in `axes`)
+///
+/// The composition of all feature quaternions should match the target.
+/// The exact Lie gradient adjusts the axes to minimize prediction error.
+///
+/// Args:
+///   features: (N × F) float64 array of continuous feature values
+///   targets: (N × 4) float64 array of target quaternions
+///   axes: (F × 3) mutable float64 array of axis vectors (learned, modified in place)
+///   n_epochs: number of training passes
+///   damping: learning rate
+///   seed: random seed
+///
+/// Returns: (predictions: N×4 float64, accuracy: float64)
+#[pyfunction]
+#[pyo3(signature = (features, targets, axes, n_epochs, damping, seed=42))]
+fn train_continuous<'py>(
+    py: Python<'py>,
+    features: PyReadonlyArray2<f64>,
+    targets: PyReadonlyArray2<f64>,
+    mut axes: numpy::PyReadwriteArray2<'py, f64>,
+    n_epochs: usize,
+    damping: f64,
+    seed: u64,
+) -> PyResult<Bound<'py, pyo3::types::PyTuple>> {
+    let feat_data = features.as_array();
+    let tgt_data = targets.as_array();
+    let mut axes_data = axes.as_array_mut();
+    let n_samples = feat_data.shape()[0];
+    let n_feat = feat_data.shape()[1];
+
+    #[inline(always)]
+    fn ham(a: &[f64; 4], b: &[f64; 4]) -> [f64; 4] {
+        [a[0]*b[0]-a[1]*b[1]-a[2]*b[2]-a[3]*b[3],
+         a[0]*b[1]+a[1]*b[0]+a[2]*b[3]-a[3]*b[2],
+         a[0]*b[2]-a[1]*b[3]+a[2]*b[0]+a[3]*b[1],
+         a[0]*b[3]+a[1]*b[2]-a[2]*b[1]+a[3]*b[0]]
+    }
+    #[inline(always)]
+    fn qnorm(q: &mut [f64; 4]) {
+        let n = (q[0]*q[0]+q[1]*q[1]+q[2]*q[2]+q[3]*q[3]).sqrt();
+        if n > 1e-15 { let inv=1.0/n; q[0]*=inv; q[1]*=inv; q[2]*=inv; q[3]*=inv; }
+        else { *q = [1.0, 0.0, 0.0, 0.0]; }
+    }
+    #[inline(always)]
+    fn qinv(a: &[f64; 4]) -> [f64; 4] { [a[0], -a[1], -a[2], -a[3]] }
+    #[inline(always)]
+    fn qcomp(a: &[f64; 4], b: &[f64; 4]) -> [f64; 4] { let mut r = ham(a, b); qnorm(&mut r); r }
+
+    // Convert feature value + axis → quaternion
+    #[inline(always)]
+    fn feat_to_quat(value: f64, ax: &[f64; 3]) -> [f64; 4] {
+        let half = value * 0.5;
+        let c = half.cos();
+        let s = half.sin();
+        // Normalize axis
+        let an = (ax[0]*ax[0] + ax[1]*ax[1] + ax[2]*ax[2]).sqrt();
+        if an < 1e-12 {
+            return [1.0, 0.0, 0.0, 0.0];
+        }
+        let inv_n = 1.0 / an;
+        let mut q = [c, s * ax[0] * inv_n, s * ax[1] * inv_n, s * ax[2] * inv_n];
+        qnorm(&mut q);
+        q
+    }
+
+    fn geodesic(pos: &[f64; 4], ideal: &[f64; 4], step: f64) -> [f64; 4] {
+        let mut id = *ideal;
+        let mut dot = pos[0]*id[0]+pos[1]*id[1]+pos[2]*id[2]+pos[3]*id[3];
+        if dot < 0.0 { id = [-id[0],-id[1],-id[2],-id[3]]; dot = -dot; }
+        if dot > 0.9999 { return id; }
+        let theta = dot.min(1.0).acos();
+        let s = theta.sin();
+        if s < 1e-8 { return *pos; }
+        let a = ((1.0-step)*theta).sin()/s;
+        let b = (step*theta).sin()/s;
+        let mut r = [a*pos[0]+b*id[0], a*pos[1]+b*id[1], a*pos[2]+b*id[2], a*pos[3]+b*id[3]];
+        qnorm(&mut r);
+        r
+    }
+
+    // LCG
+    let mut rng = seed;
+    let mut next = || -> u64 {
+        rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        rng
+    };
+    let mut order: Vec<usize> = (0..n_samples).collect();
+
+    for _epoch in 0..n_epochs {
+        for i in (1..n_samples).rev() {
+            let j = (next() as usize) % (i + 1);
+            order.swap(i, j);
+        }
+
+        for &idx in &order {
+            let target: [f64; 4] = [tgt_data[[idx,0]], tgt_data[[idx,1]],
+                                     tgt_data[[idx,2]], tgt_data[[idx,3]]];
+
+            // Build quaternions from features × axes
+            let mut quats = vec![[0.0f64; 4]; n_feat];
+            for f in 0..n_feat {
+                let ax = [axes_data[[f,0]], axes_data[[f,1]], axes_data[[f,2]]];
+                quats[f] = feat_to_quat(feat_data[[idx, f]], &ax);
+            }
+
+            // Compose
+            let mut c = [1.0, 0.0, 0.0, 0.0];
+            for f in 0..n_feat { c = qcomp(&c, &quats[f]); }
+
+            // Error
+            let eq = qcomp(&c, &qinv(&target));
+            let es = eq[0].abs().min(1.0).acos();
+            if es < 1e-6 { continue; }
+
+            let w_mag = eq[0].abs();
+            let rgb_mag = (eq[1]*eq[1]+eq[2]*eq[2]+eq[3]*eq[3]).sqrt();
+            let tf = if w_mag > rgb_mag { 1.0 } else { 0.5 };
+            let step = damping * (es / std::f64::consts::PI) * tf;
+
+            // Left/right products
+            let mut left = vec![[1.0, 0.0, 0.0, 0.0]; n_feat + 1];
+            for f in 0..n_feat { left[f+1] = qcomp(&left[f], &quats[f]); }
+            let mut right = vec![[1.0, 0.0, 0.0, 0.0]; n_feat + 1];
+            for f in (0..n_feat).rev() { right[f] = qcomp(&quats[f], &right[f+1]); }
+
+            // For each feature: ideal quaternion, then back-project to axis adjustment
+            for f in 0..n_feat {
+                let ideal_q = qcomp(&qcomp(&qinv(&left[f]), &target), &qinv(&right[f+1]));
+                let current_q = quats[f];
+
+                // Move current_q toward ideal_q via geodesic
+                let new_q = geodesic(&current_q, &ideal_q, step);
+
+                // Back-project new_q to axis: new_q = [cos(θ/2), sin(θ/2)*axis]
+                // θ is fixed (it's the feature value), so the axis must change
+                let fval = feat_data[[idx, f]];
+                let half = fval * 0.5;
+                let sin_half = half.sin();
+
+                if sin_half.abs() > 1e-8 {
+                    // Extract new axis from new_q's vector part
+                    let inv_s = 1.0 / sin_half;
+                    let new_ax = [new_q[1] * inv_s, new_q[2] * inv_s, new_q[3] * inv_s];
+                    // Normalize
+                    let ax_n = (new_ax[0]*new_ax[0]+new_ax[1]*new_ax[1]+new_ax[2]*new_ax[2]).sqrt();
+                    if ax_n > 1e-8 {
+                        // Geodesic step on the axis (in R³, just lerp + normalize)
+                        for d in 0..3 {
+                            let cur = axes_data[[f, d]];
+                            let tgt = new_ax[d] / ax_n;
+                            axes_data[[f, d]] = cur + step * (tgt - cur);
+                        }
+                        // Re-normalize axis
+                        let an = (axes_data[[f,0]].powi(2)+axes_data[[f,1]].powi(2)+axes_data[[f,2]].powi(2)).sqrt();
+                        if an > 1e-8 {
+                            axes_data[[f,0]] /= an;
+                            axes_data[[f,1]] /= an;
+                            axes_data[[f,2]] /= an;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Compute final predictions
+    let mut preds = vec![0.0f64; n_samples * 4];
+    let mut correct = 0usize;
+    for idx in 0..n_samples {
+        let mut c = [1.0, 0.0, 0.0, 0.0];
+        for f in 0..n_feat {
+            let ax = [axes_data[[f,0]], axes_data[[f,1]], axes_data[[f,2]]];
+            let q = feat_to_quat(feat_data[[idx, f]], &ax);
+            c = qcomp(&c, &q);
+        }
+        preds[idx*4] = c[0]; preds[idx*4+1] = c[1];
+        preds[idx*4+2] = c[2]; preds[idx*4+3] = c[3];
+
+        let t: [f64; 4] = [tgt_data[[idx,0]], tgt_data[[idx,1]],
+                            tgt_data[[idx,2]], tgt_data[[idx,3]]];
+        let dot = (c[0]*t[0]+c[1]*t[1]+c[2]*t[2]+c[3]*t[3]).abs();
+        if dot > 0.5 { correct += 1; }
+    }
+
+    let acc = correct as f64 / n_samples.max(1) as f64;
+    let preds_arr = numpy::PyArray1::from_vec(py, preds);
+    let acc_val = pyo3::types::PyFloat::new(py, acc);
+    let result = pyo3::types::PyTuple::new(py, &[preds_arr.into_any(), acc_val.into_any()])?;
+    Ok(result.into())
+}
+
+/// Run Trinity's complete S1/S2/S3 cycle on streams of events. Entirely in Rust.
+///
+/// The complete cycle per tick:
+///   Reality → S1×S3 → Perception → S2×S3 → Prediction → S1 → Reality
+///   → Response → S1 → Evaluation → Write S3
+///
+/// Per-(event, S2_context) transformations stored in a HashMap.
+/// S2's hierarchical identity (compose across active levels) determines context.
+/// Fiber-aware Hopf correction: W on S¹, RGB slerped on S².
+/// S3 as real lattice (closures, level spawning).
+/// Flush clears prediction state (no cross-boundary evaluation).
+///
+/// Args:
+///   genome: (G × 4) event positions on S³ — S1's fixed adapter (set externally, not learned here)
+///   events: flat i32 array of event indices into genome
+///   task_lengths: i32 array — length of each task's stream (flush between tasks)
+///   epsilon_s2: closure threshold for S2 lattice
+///   epsilon_s3: closure threshold for S3 lattice
+///   damping: learning rate for T geodesic correction
+///   max_depth: max lattice depth for S2 and S3
+///   n_passes: replay all tasks this many times
+///   n_colors: number of tokens to score at decode (first n_colors genome entries)
+///   m_factors: parallel S2 lattices (default 1)
+///   max_genome_entries: hard cap on TGenome size
+///
+/// Returns: (predictions, genome_dump, prediction_distances)
+///   predictions: (N,) i32 — predicted next-event index per tick
+///   genome_dump: flat f64 — 4 floats per learned T entry
+///   prediction_distances: flat f64 — n_colors geodesic distances per tick
+#[pyfunction]
+#[pyo3(signature = (genome, events, task_lengths, epsilon_s2, epsilon_s3, damping, max_depth, n_passes, n_colors=10, m_factors=1, max_genome_entries=65536, attend_k=1, attend_temperature=0.1, attend_depth=1))]
+fn run_trinity<'py>(
+    py: Python<'py>,
+    mut genome: numpy::PyReadwriteArray2<'py, f64>,
+    events: PyReadonlyArray1<i32>,
+    task_lengths: PyReadonlyArray1<i32>,
+    epsilon_s2: f64,
+    epsilon_s3: f64,
+    damping: f64,
+    max_depth: usize,
+    n_passes: usize,
+    n_colors: usize,
+    m_factors: usize,
+    max_genome_entries: usize,
+    attend_k: usize,
+    attend_temperature: f64,
+    attend_depth: usize,
+) -> PyResult<Bound<'py, pyo3::types::PyTuple>> {
+    use crate::trinity::{self, TrinityConfig};
+
+    let events_data = events.as_slice().map_err(|_| PyValueError::new_err("events not contiguous"))?;
+    let task_lens = task_lengths.as_slice().map_err(|_| PyValueError::new_err("task_lengths not contiguous"))?;
+    let genome_data = genome.as_array();
+    let n_genome = genome_data.shape()[0];
+
+    let mut genome_vec: Vec<[f64; 4]> = Vec::with_capacity(n_genome);
+    for i in 0..n_genome {
+        genome_vec.push([genome_data[[i,0]], genome_data[[i,1]],
+                         genome_data[[i,2]], genome_data[[i,3]]]);
+    }
+
+    let config = TrinityConfig {
+        epsilon_s2, epsilon_s3, damping, max_depth, n_passes,
+        n_colors, m_factors, max_genome_entries, attend_k, attend_temperature,
+        attend_depth,
+    };
+
+    let result = trinity::run_trinity(&mut genome_vec, events_data, task_lens, &config);
+
+    // Write mutated genome positions back to numpy array.
+    {
+        let mut genome_mut = genome.as_array_mut();
+        for i in 0..n_genome {
+            genome_mut[[i,0]] = genome_vec[i][0];
+            genome_mut[[i,1]] = genome_vec[i][1];
+            genome_mut[[i,2]] = genome_vec[i][2];
+            genome_mut[[i,3]] = genome_vec[i][3];
+        }
+    }
+
+    // genome_dump: flat n×4 T-transforms (4 floats per entry).
+    // context_keys_dump: flat n×4 context keys (paired with transforms).
+    let preds_arr = PyArray1::from_vec(py, result.predictions);
+    let t_arr = PyArray1::from_vec(py, result.genome_dump);
+    let dist_arr = PyArray1::from_vec(py, result.prediction_distances);
+    let ck_arr = PyArray1::from_vec(py, result.context_keys_dump);
+    let out = pyo3::types::PyTuple::new(py, &[
+        preds_arr.into_any(), t_arr.into_any(), dist_arr.into_any(), ck_arr.into_any(),
+    ])?;
+    Ok(out.into())
+}
+
+// ── Resonance Query ─────────────────────────────────────────────────
+// The 8th primitive. Content-addressable retrieval on S³.
+// Given a query element and a GeometricPath, find the stored elements
+// with lowest geodesic distance (sigma) to the query.
+
+/// Resonance scan: find the k closest stored elements to a query.
+///
+/// Takes a query element (4 floats, unit quaternion on S³) and a
+/// GeometricPath. Returns a list of (index, sigma, base_r, base_g,
+/// base_b, phase) tuples sorted by sigma (closest first).
+///
+/// O(n) — scans all elements. For sub-linear retrieval, use the
+/// lattice index (future).
+#[pyfunction]
+#[pyo3(signature = (query, path, k = 1))]
+fn resonance_query<'py>(
+    py: Python<'py>,
+    query: PyReadonlyArray1<f64>,
+    path: &PyGeometricPath,
+    k: usize,
+) -> PyResult<Bound<'py, PyArray2<f64>>> {
+    let q = as_contiguous_slice_1d(&query, "query")?;
+    if q.len() != 4 {
+        return Err(PyValueError::new_err(format!(
+            "query must have 4 elements (S³ quaternion), got {}",
+            q.len()
+        )));
+    }
+
+    let group = crate::groups::sphere::SphereGroup;
+    let results = crate::resonance::resonance_scan(&group, q, &path.inner, k);
+
+    // Return as (k × 6) array: [index, sigma, base_r, base_g, base_b, phase]
+    let n = results.len();
+    let mut data = Vec::with_capacity(n * 6);
+    for r in &results {
+        data.push(r.index as f64);
+        data.push(r.drift);
+        data.push(r.base[0]);
+        data.push(r.base[1]);
+        data.push(r.base[2]);
+        data.push(r.phase);
+    }
+    let arr = PyArray2::from_vec2(py, &data.chunks(6).map(|c| c.to_vec()).collect::<Vec<_>>())
+        .map_err(|e| PyValueError::new_err(format!("failed to create array: {e}")))?;
+    Ok(arr)
+}
+
+/// Resonance scan from raw bytes: embed the query, then scan the path.
+///
+/// Convenience function that handles the embed step so Python doesn't
+/// need to call embed() separately.
+#[pyfunction]
+#[pyo3(signature = (query_bytes, path, k = 1, hashed = true))]
+fn resonance_query_raw<'py>(
+    py: Python<'py>,
+    query_bytes: &[u8],
+    path: &PyGeometricPath,
+    k: usize,
+    hashed: bool,
+) -> PyResult<Bound<'py, PyArray2<f64>>> {
+    let query = crate::embed::bytes_to_sphere(query_bytes, hashed);
+    let group = crate::groups::sphere::SphereGroup;
+    let results = crate::resonance::resonance_scan(&group, &query, &path.inner, k);
+
+    let n = results.len();
+    let mut data = Vec::with_capacity(n * 6);
+    for r in &results {
+        data.push(r.index as f64);
+        data.push(r.drift);
+        data.push(r.base[0]);
+        data.push(r.base[1]);
+        data.push(r.base[2]);
+        data.push(r.phase);
+    }
+    let arr = PyArray2::from_vec2(py, &data.chunks(6).map(|c| c.to_vec()).collect::<Vec<_>>())
+        .map_err(|e| PyValueError::new_err(format!("failed to create array: {e}")))?;
+    Ok(arr)
+}
+
+// ── Table (Closure DNA) ─────────────────────────────────────────────
+// Columnar database. Each field is its own element on S³.
+// Schema defines columns (F64 or Bytes). Each column stored separately.
+// Filter/aggregate/sort read only the relevant column — no parsing.
+
+/// A Closure DNA database table with typed columns.
+#[pyclass(name = "Table")]
+pub struct PyTable {
+    inner: crate::table::Table,
+}
+
+#[pymethods]
+impl PyTable {
+    /// Create a new table with typed columns.
+    /// schema: list of (name, type, indexed) tuples. type: "f64" or "bytes".
+    #[staticmethod]
+    /// Create a new table with typed columns.
+    /// schema: list of (name, type, indexed, not_null, unique) tuples.
+    /// type: "f64", "i64", or "bytes".
+    fn create(path: &str, schema: Vec<(String, String, bool, bool, bool)>) -> PyResult<Self> {
+        let defs: Vec<crate::table::ColumnDef> = schema
+            .into_iter()
+            .map(|(name, typ, indexed, not_null, unique)| crate::table::ColumnDef {
+                name,
+                col_type: match typ.as_str() {
+                    "f64" => crate::table::ColumnType::F64,
+                    "i64" => crate::table::ColumnType::I64,
+                    _ => crate::table::ColumnType::Bytes,
+                },
+                indexed,
+                not_null,
+                unique,
+            })
+            .collect();
+        let table = crate::table::Table::create(std::path::Path::new(path), defs)
+            .map_err(|e| PyValueError::new_err(format!("create failed: {e}")))?;
+        Ok(Self { inner: table })
+    }
+
+    /// Open an existing table.
+    #[staticmethod]
+    fn open(path: &str) -> PyResult<Self> {
+        let table = crate::table::Table::open(std::path::Path::new(path))
+            .map_err(|e| PyValueError::new_err(format!("open failed: {e}")))?;
+        Ok(Self { inner: table })
+    }
+
+    /// Insert one row. values: list of (f64 or bytes) matching schema order.
+    fn insert(&mut self, values: Vec<PyColumnValue>) -> PyResult<usize> {
+        let vals: Vec<crate::table::ColumnValue> = values.into_iter().map(|v| v.into()).collect();
+        self.inner
+            .insert(&vals)
+            .map_err(|e| PyValueError::new_err(format!("insert failed: {e}")))
+    }
+
+    /// Insert many rows.
+    fn insert_many(&mut self, rows: Vec<Vec<PyColumnValue>>) -> PyResult<usize> {
+        let converted: Vec<Vec<crate::table::ColumnValue>> = rows
+            .into_iter()
+            .map(|row| row.into_iter().map(|v| v.into()).collect())
+            .collect();
+        self.inner
+            .insert_many(&converted)
+            .map_err(|e| PyValueError::new_err(format!("insert_many failed: {e}")))
+    }
+
+    /// Insert many rows as typed columns. This is the native columnar ingest path.
+    fn insert_columns(&mut self, columns: Vec<PyColumnBatch>) -> PyResult<usize> {
+        let converted: Vec<crate::table::ColumnBatch> =
+            columns.into_iter().map(|col| col.into()).collect();
+        self.inner
+            .insert_columns(&converted)
+            .map_err(|e| PyValueError::new_err(format!("insert_columns failed: {e}")))
+    }
+
+    /// Resonance search for a typed row query.
+    #[pyo3(signature = (values, k = 1))]
+    fn search<'py>(
+        &mut self,
+        py: Python<'py>,
+        values: Vec<PyColumnValue>,
+        k: usize,
+    ) -> PyResult<Bound<'py, PyArray2<f64>>> {
+        let vals: Vec<crate::table::ColumnValue> = values.into_iter().map(|v| v.into()).collect();
+        let results = self
+            .inner
+            .search(&vals, k)
+            .map_err(|e| PyValueError::new_err(format!("search failed: {e}")))?;
+
+        let n = results.len();
+        let mut data = Vec::with_capacity(n * 6);
+        for r in &results {
+            data.push(r.index as f64);
+            data.push(r.drift);
+            data.push(r.base[0]);
+            data.push(r.base[1]);
+            data.push(r.base[2]);
+            data.push(r.phase);
+        }
+        let arr = PyArray2::from_vec2(py, &data.chunks(6).map(|c| c.to_vec()).collect::<Vec<_>>())
+            .map_err(|e| PyValueError::new_err(format!("failed to create array: {e}")))?;
+        Ok(arr)
+    }
+
+    fn build_genome(&mut self) -> PyResult<()> {
+        self.inner.build_genome()
+            .map_err(|e| PyValueError::new_err(format!("build_genome failed: {e}")))
+    }
+
+    fn genome_depth(&mut self) -> PyResult<usize> {
+        self.inner.genome_depth()
+            .map_err(|e| PyValueError::new_err(format!("genome_depth failed: {e}")))
+    }
+
+    fn genome_codons(&mut self) -> PyResult<usize> {
+        self.inner.genome_codons()
+            .map_err(|e| PyValueError::new_err(format!("genome_codons failed: {e}")))
+    }
+
+    fn schema(&self) -> Vec<(String, String, bool)> {
+        self.inner
+            .schema_entries()
+            .into_iter()
+            .map(|entry| {
+                let typ = match entry.col_type {
+                    crate::table::ColumnType::F64 => "f64".to_string(),
+                    crate::table::ColumnType::I64 => "i64".to_string(),
+                    crate::table::ColumnType::Bytes => "bytes".to_string(),
+                };
+                (entry.name, typ, entry.indexed)
+            })
+            .collect()
+    }
+
+    /// Get a field value. Returns f64 or bytes depending on column type.
+    fn get_f64(&mut self, row: usize, col: usize) -> PyResult<f64> {
+        self.inner
+            .get_field_f64(row, col)
+            .map_err(|e| PyValueError::new_err(format!("get failed: {e}")))
+    }
+
+    fn get_i64(&mut self, row: usize, col: usize) -> PyResult<i64> {
+        self.inner
+            .get_field_i64(row, col)
+            .map_err(|e| PyValueError::new_err(format!("get failed: {e}")))
+    }
+
+    fn get_bytes(&mut self, row: usize, col: usize) -> PyResult<Vec<u8>> {
+        self.inner
+            .get_field_bytes(row, col)
+            .map_err(|e| PyValueError::new_err(format!("get failed: {e}")))
+    }
+
+    fn get_row<'py>(&mut self, py: Python<'py>, row: usize) -> PyResult<Vec<PyObject>> {
+        let values = self
+            .inner
+            .get_row(row)
+            .map_err(|e| PyValueError::new_err(format!("get_row failed: {e}")))?;
+        let mut out = Vec::with_capacity(values.len());
+        for value in values {
+            match value {
+                crate::table::ColumnValue::Null => out.push(py.None()),
+                crate::table::ColumnValue::F64(v) => out.push(v.into_pyobject(py)?.unbind().into()),
+                crate::table::ColumnValue::I64(v) => out.push(v.into_pyobject(py)?.unbind().into()),
+                crate::table::ColumnValue::Bytes(v) => out.push(PyBytes::new(py, &v).into()),
+            }
+        }
+        Ok(out)
+    }
+
+    /// Column index by name.
+    fn column_index(&self, name: &str) -> PyResult<usize> {
+        self.inner
+            .column_index(name)
+            .ok_or_else(|| PyValueError::new_err(format!("no column: {name}")))
+    }
+
+    /// Filter by string column equality. Returns matching row indices.
+    fn filter_equals(&mut self, col_name: &str, value: &[u8]) -> PyResult<Vec<usize>> {
+        self.inner
+            .filter_equals(col_name, value)
+            .map_err(|e| PyValueError::new_err(format!("filter failed: {e}")))
+    }
+
+    /// Filter by numeric comparison. Returns matching row indices.
+    fn filter_cmp(&mut self, col_name: &str, op: &str, value: f64) -> PyResult<Vec<usize>> {
+        self.inner
+            .filter_cmp(col_name, op, value)
+            .map_err(|e| PyValueError::new_err(format!("filter failed: {e}")))
+    }
+
+    /// Sum a numeric column.
+    fn sum(&mut self, col_name: &str) -> PyResult<f64> {
+        self.inner
+            .sum(col_name)
+            .map_err(|e| PyValueError::new_err(format!("sum failed: {e}")))
+    }
+
+    /// Average a numeric column.
+    fn avg(&mut self, col_name: &str) -> PyResult<f64> {
+        self.inner
+            .avg(col_name)
+            .map_err(|e| PyValueError::new_err(format!("avg failed: {e}")))
+    }
+
+    /// Sort indices by numeric column.
+    #[pyo3(signature = (col_name, descending = false))]
+    fn argsort(&mut self, col_name: &str, descending: bool) -> PyResult<Vec<usize>> {
+        self.inner
+            .argsort(col_name, descending)
+            .map_err(|e| PyValueError::new_err(format!("sort failed: {e}")))
+    }
+
+    /// Check table integrity. Returns drift (0 = clean).
+    fn check(&self) -> f64 {
+        self.inner.check()
+    }
+
+    fn check_hopf<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let view = self.inner.check_hopf();
+        Ok(PyArray1::from_vec(
+            py,
+            vec![view.drift, view.base[0], view.base[1], view.base[2], view.phase],
+        ))
+    }
+
+    fn inspect_row<'py>(&mut self, py: Python<'py>, row: usize) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let view = self
+            .inner
+            .inspect_row(row)
+            .map_err(|e| PyValueError::new_err(format!("inspect_row failed: {e}")))?;
+        Ok(PyArray1::from_vec(
+            py,
+            vec![view.drift, view.base[0], view.base[1], view.base[2], view.phase],
+        ))
+    }
+
+    fn audit<'py>(&mut self, py: Python<'py>) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let result = self
+            .inner
+            .audit()
+            .map_err(|e| PyValueError::new_err(format!("audit failed: {e}")))?;
+        Ok(PyArray1::from_vec(
+            py,
+            vec![
+                if result.ok { 1.0 } else { 0.0 },
+                result.drift,
+                result.bad_row.map(|v| v as f64).unwrap_or(-1.0),
+                result.hopf.base[0],
+                result.hopf.base[1],
+                result.hopf.base[2],
+                result.hopf.phase,
+            ],
+        ))
+    }
+
+    fn repair(&mut self) -> PyResult<()> {
+        self.inner
+            .repair()
+            .map_err(|e| PyValueError::new_err(format!("repair failed: {e}")))
+    }
+
+    fn update(&mut self, values: Vec<PyColumnValue>, row: usize) -> PyResult<()> {
+        let vals: Vec<crate::table::ColumnValue> = values.into_iter().map(|v| v.into()).collect();
+        self.inner
+            .update(row, &vals)
+            .map_err(|e| PyValueError::new_err(format!("update failed: {e}")))
+    }
+
+    fn delete(&mut self, row: usize) -> PyResult<()> {
+        self.inner
+            .delete(row)
+            .map_err(|e| PyValueError::new_err(format!("delete failed: {e}")))
+    }
+
+    /// Table identity — 32-byte quaternion.
+    fn identity<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
+        let id = self.inner.identity();
+        PyArray1::from_vec(py, id.to_vec())
+    }
+
+    /// How many rows.
+    fn count(&self) -> usize {
+        self.inner.count()
+    }
+
+    /// Save to disk.
+    fn save(&mut self) -> PyResult<()> {
+        self.inner
+            .save()
+            .map_err(|e| PyValueError::new_err(format!("save failed: {e}")))
+    }
+
+    fn __len__(&self) -> usize {
+        self.inner.count()
+    }
+
+    fn __repr__(&self) -> String {
+        format!("Table(records={}, drift={:.6})", self.inner.count(), self.inner.check())
+    }
+}
+
+/// Column value passed from Python — NULL, i64, f64, or bytes.
+enum PyColumnValue {
+    Null,
+    Int(i64),
+    Float(f64),
+    Bytes(Vec<u8>),
+}
+
+impl<'py> FromPyObject<'py> for PyColumnValue {
+    fn extract_bound(ob: &Bound<'py, PyAny>) -> PyResult<Self> {
+        if ob.is_none() {
+            return Ok(Self::Null);
+        }
+        if let Ok(v) = ob.extract::<i64>() {
+            return Ok(Self::Int(v));
+        }
+        if let Ok(v) = ob.extract::<f64>() {
+            return Ok(Self::Float(v));
+        }
+        if let Ok(v) = ob.extract::<Vec<u8>>() {
+            return Ok(Self::Bytes(v));
+        }
+        Err(PyValueError::new_err(
+            "column value must be None, int, float, or bytes",
+        ))
+    }
+}
+
+impl From<PyColumnValue> for crate::table::ColumnValue {
+    fn from(v: PyColumnValue) -> Self {
+        match v {
+            PyColumnValue::Null => crate::table::ColumnValue::Null,
+            PyColumnValue::Int(i) => crate::table::ColumnValue::I64(i),
+            PyColumnValue::Float(f) => crate::table::ColumnValue::F64(f),
+            PyColumnValue::Bytes(b) => crate::table::ColumnValue::Bytes(b),
+        }
+    }
+}
+
+#[derive(FromPyObject)]
+enum PyColumnBatch {
+    #[pyo3(transparent)]
+    Int(Vec<i64>),
+    #[pyo3(transparent)]
+    Float(Vec<f64>),
+    #[pyo3(transparent)]
+    Bytes(Vec<Vec<u8>>),
+}
+
+impl From<PyColumnBatch> for crate::table::ColumnBatch {
+    fn from(v: PyColumnBatch) -> Self {
+        match v {
+            PyColumnBatch::Int(i) => crate::table::ColumnBatch::I64(i),
+            PyColumnBatch::Float(f) => crate::table::ColumnBatch::F64(f),
+            PyColumnBatch::Bytes(b) => crate::table::ColumnBatch::Bytes(b),
+        }
+    }
+}
+
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(circle, m)?)?;
     m.add_function(wrap_pyfunction!(sphere, m)?)?;
@@ -1266,9 +2158,15 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(score_vocabulary, m)?)?;
     m.add_function(wrap_pyfunction!(collect_followers_multi, m)?)?;
     m.add_function(wrap_pyfunction!(build_info, m)?)?;
+    m.add_function(wrap_pyfunction!(train_cells, m)?)?;
+    m.add_function(wrap_pyfunction!(train_continuous, m)?)?;
+    m.add_function(wrap_pyfunction!(run_trinity, m)?)?;
+    m.add_function(wrap_pyfunction!(resonance_query, m)?)?;
+    m.add_function(wrap_pyfunction!(resonance_query_raw, m)?)?;
     m.add_class::<PyGroup>()?;
     m.add_class::<PyGeometricPath>()?;
     m.add_class::<PyStreamMonitor>()?;
     m.add_class::<PyHierarchicalClosure>()?;
+    m.add_class::<PyTable>()?;
     Ok(())
 }

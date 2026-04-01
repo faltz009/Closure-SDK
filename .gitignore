@@ -1,4 +1,4 @@
-# Ignore everything, surface only the SDK package
+# Ignore everything, allowlist what ships
 *
 
 # CI
@@ -13,12 +13,30 @@
 !README.md
 !LICENSE
 !CLOSURE_SDK.md
+!CLOSURE_CLI.md
+!CLOSURE_DNA.md
+!CLOSURE_APPLICATIONS.md
 !TEST_RESULTS.md
 
-# Build config
+# Root build config
 !pyproject.toml
 
-# SDK (Python)
+# Paper
+!zeroth_law_full-1.pdf
+
+# ─── Rust core (shared primitives) ───────────────────────────────────
+!rust/
+!rust/Cargo.toml
+!rust/Cargo.lock
+!rust/pyproject.toml
+!rust/src/
+!rust/src/**
+
+# ─── closure_rs (compiled extension) ────────────────────────────────
+!closure_rs/
+!closure_rs/__init__.py
+
+# ─── closure_sdk (verification SDK) ─────────────────────────────────
 !closure_sdk/
 !closure_sdk/__init__.py
 !closure_sdk/ops.py
@@ -27,59 +45,11 @@
 !closure_sdk/canon.py
 !closure_sdk/valence.py
 !closure_sdk/hopf.py
-
-# Compiled extension
-!closure_rs/
-!closure_rs/__init__.py
-!closure_rs/*.so
-
-# Rust source
-!rust/
-!rust/Cargo.toml
-!rust/Cargo.lock
-!rust/pyproject.toml
-!rust/src/
-!rust/src/**
-
-# Tests
-!tests/
-!tests/__init__.py
-!tests/conftest.py
-!tests/test_sdk.py
-!tests/test_retention.py
-!tests/test_enkidu.py
-!tests/test_gilgamesh.py
-!tests/test_theorems.py
-!tests/test_groups.py
-!tests/test_path.py
-!tests/test_hierarchy.py
-!tests/test_fast_path.py
-!tests/test_stream_monitor.py
-!tests/test_bind.py
-
-# Type stubs
 !closure_sdk/py.typed
+!closure_sdk/tests/
+!closure_sdk/tests/**
 
-# Examples
-!examples/
-!examples/01_detect_drift.py
-!examples/02_find_incidents.py
-!examples/03_stream_classify.py
-!examples/04_bind.py
-!examples/05_color_channels.py
-
-# Benchmarks and demos
-!benchmarks/
-!benchmarks/benchmark_sdk.py
-!benchmarks/demo_operations.py
-!benchmarks/demo_stream.py
-!benchmarks/outputs/
-!benchmarks/outputs/benchmark_sdk.txt
-!benchmarks/outputs/demo_operations.txt
-!benchmarks/outputs/demo_stream.txt
-
-# CLI
-!CLOSURE_CLI.md
+# ─── closure_cli (command-line interface) ────────────────────────────
 !closure_cli/
 !closure_cli/__init__.py
 !closure_cli/__main__.py
@@ -89,10 +59,71 @@
 !closure_cli/reader.py
 !closure_cli/seeker.py
 
-# CLI tests
-!tests/test_cli.py
+# ─── closure_dna (geometric database) ───────────────────────────────
+!closure_dna/
+!closure_dna/README.md
+!closure_dna/CLOSURE_DNA.md
+!closure_dna/pyproject.toml
+!closure_dna/__init__.py
+!closure_dna/__main__.py
+!closure_dna/table.py
+!closure_dna/database.py
+!closure_dna/query.py
+!closure_dna/result.py
+!closure_dna/cli.py
+!closure_dna/repl.py
+!closure_dna/sql.py
+!closure_dna/web.py
+!closure_dna/rust/
+!closure_dna/rust/src/
+!closure_dna/rust/src/table.rs
+!closure_dna/rust/src/composition_tree.rs
+!closure_dna/benchmarks/
+!closure_dna/benchmarks/bench_dna.py
+!closure_dna/benchmarks/benchmark_100k.txt
+!closure_dna/tests/
+!closure_dna/tests/__init__.py
+!closure_dna/tests/conftest.py
+!closure_dna/tests/test_table.py
+!closure_dna/tests/test_database.py
+!closure_dna/tests/test_dna_features.py
+!closure_dna/tests/test_dna_rigorous.py
+!closure_dna/tests/test_dna_cli.py
+!closure_dna/tests/test_sql.py
+!closure_dna/tests/test_repl.py
+!closure_dna/tests/test_cli.py
+!closure_dna/tests/test_demo.py
 
-# Test data (small files only — large datasets stay local)
+# ─── closure_ea (Rust only — build dependency for shared crate) ──────
+!closure_ea/
+!closure_ea/rust/
+!closure_ea/rust/src/
+!closure_ea/rust/src/trinity.rs
+
+# ─── Tests (root-level SDK tests) ───────────────────────────────────
+!tests/
+!tests/__init__.py
+!tests/conftest.py
+
+# ─── Examples ────────────────────────────────────────────────────────
+!examples/
+!examples/01_detect_drift.py
+!examples/02_find_incidents.py
+!examples/03_stream_classify.py
+!examples/04_bind.py
+!examples/05_color_channels.py
+
+# ─── Benchmarks (SDK) ───────────────────────────────────────────────
+!benchmarks/
+!benchmarks/benchmark_sdk.py
+!benchmarks/demo_operations.py
+!benchmarks/demo_stream.py
+!benchmarks/outputs/
+!benchmarks/outputs/benchmark_sdk.txt
+!benchmarks/outputs/demo_operations.txt
+!benchmarks/outputs/demo_stream.txt
+
+# ─── Test data ───────────────────────────────────────────────────────
 !data/
 !data/DATA_CATALOG.md
 !data/test_a.jsonl
@@ -102,23 +133,6 @@
 !data/walmart_a_100.jsonl
 !data/walmart_b_100.jsonl
 
-# Brahman — S³ Transformer
-!brahman/
-!brahman/__init__.py
-!brahman/__main__.py
-!brahman/model.py
-!brahman/data.py
-!brahman/train.py
-!brahman/BRAHMAN.md
-!brahman/DRAWING_BOARD.md
-!brahman/DRAWING_BOARD_2.md
-!brahman/train_pure.py
-!brahman/visual/
-!brahman/visual/data.py
-!brahman/visual/train.py
-!brahman/visual/__init__.py
-!brahman/visual/BRAHMAN_VISUAL.md
-!brahman/visual/sweep_overhead.py
-
-# Paper
-!zeroth_law_full-1.pdf
+# ─── GitHub Pages ────────────────────────────────────────────────────
+!docs/
+!docs/**

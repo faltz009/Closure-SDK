@@ -1,0 +1,59 @@
+
+======================================================================
+  Closure DNA vs SQLite — 100,000 records (fair benchmark)
+  SQLite has indexes on city and age for filter comparisons
+======================================================================
+
+  Running Closure DNA...
+  Running SQLite (with indexes)...
+
+  Operation                     Closure DNA       SQLite      Ratio  Winner
+  ──────────────────────────── ──────────── ──────────── ──────────  ───────────────
+  Insert                           100.36ms      88.27ms       1.1x  SQLite
+  Get x1000                         753.6us       4.41ms       5.9x  Closure DNA
+  Integrity check                     9.5us     104.56ms   11027.0x  Closure DNA
+  Filter city=X (indexed)           713.3us       7.86ms      11.0x  Closure DNA
+  Filter age>50 (indexed)            1.57ms      17.07ms      10.9x  Closure DNA
+  city=X AND age>50                  4.48ms       8.87ms       2.0x  Closure DNA
+  AVG(score)                        751.7us       5.16ms       6.9x  Closure DNA
+  Sort by age                        3.20ms      35.13ms      11.0x  Closure DNA
+  Update 1 row (mid-table)           82.1us      125.2us       1.5x  Closure DNA
+  Delete 1 row                       17.0us       60.6us       3.6x  Closure DNA
+  Cold start (reopen)               114.3us       65.9us       1.7x  SQLite
+  Resonance search                  47.18ms          N/A             Exclusive
+  Table identity                     14.1us          N/A             Exclusive
+
+  Memory (estimated from structure sizes):
+    Closure DNA:  ~6.1MB (composition tree, loaded lazily)
+    SQLite:       default 2MB page cache
+
+  Disk usage:
+    Closure DNA total:     26.5MB
+      data (columns):      4.7MB
+      geometric sidecars:  20.2MB
+      (sidecars are rebuildable — delete them, they regenerate)
+    SQLite total:          6.1MB
+      main db:             6.1MB
+      WAL + shm:           0B
+      (SQLite needs WAL for crash safety + indexes for fast filter)
+
+  What each system needs on disk for the same features:
+    Feature                     Closure DNA         SQLite
+    ─────────────────────────── ─────────────────── ───────────────────
+    Data storage                columns (4.7MB)  B-tree pages (6.1MB)
+    Crash recovery              header (32 bytes)   WAL (0B)
+    Integrity verification      running product     not built-in
+    Column indexes              sidecars (20.2MB)  B-tree indexes (in main db)
+    Tamper detection             built-in            not available
+    Replication proof            32 bytes            not available
+    Similarity search index      built-in            not available
+
+  Notes:
+    - SQLite filter benchmarks use INDEXED columns (CREATE INDEX)
+    - Integrity check: SQLite checks B-tree structure (file format)
+      Closure DNA checks data composition (any record change detected)
+      Different questions — CDNA's is a stronger data guarantee
+    - Update/delete: O(log n) via balanced composition tree
+    - Cold start: reads schema + header + tree root only.
+    - Memory: CDNA tree is ~64 bytes per row (leaves + internal nodes)
+

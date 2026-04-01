@@ -61,6 +61,25 @@ impl GeometricPath {
         Self { group, dim, data, buf }
     }
 
+    /// Build from pre-computed running products loaded from disk.
+    /// Products must contain (n+1) * dim floats: identity at position 0,
+    /// then C_1, C_2, ..., C_n.
+    pub fn from_products(group: Box<dyn LieGroup>, products: Vec<f64>, dim: usize) -> Self {
+        assert!(
+            products.len() % dim == 0,
+            "products length {} not divisible by dim {}",
+            products.len(),
+            dim
+        );
+        let buf = vec![0.0; dim];
+        Self {
+            group,
+            dim,
+            data: products,
+            buf,
+        }
+    }
+
     pub fn len(&self) -> usize {
         self.data.len() / self.dim - 1
     }
@@ -88,6 +107,43 @@ impl GeometricPath {
         );
         let inv = self.group.inverse(self.running_product(t - 1));
         self.group.compose(&inv, self.running_product(t))
+    }
+
+    /// Replace element at position t (1-indexed) and recompute all
+    /// running products from t onward. O(n - t).
+    ///
+    /// Used for mutations: update replaces with a new element,
+    /// delete replaces with identity (neutral contribution).
+    pub fn replace_element(&mut self, t: usize, new_element: &[f64]) {
+        assert!(
+            t >= 1 && t <= self.len(),
+            "t={} out of range [1, {}]",
+            t,
+            self.len()
+        );
+        let n = self.len();
+        let dim = self.dim;
+
+        // Step 1: recover elements t+1..n from current products.
+        // Copy products first so we can read them while mutating.
+        let products_from_t = self.data[t * dim..].to_vec();
+        let num_after = n - t;
+        let mut after_elements = vec![0.0; num_after * dim];
+
+        for i in 0..num_after {
+            let prev = &products_from_t[i * dim..(i + 1) * dim];
+            let curr = &products_from_t[(i + 1) * dim..(i + 2) * dim];
+            let inv = self.group.inverse(prev);
+            let elem = self.group.compose(&inv, curr);
+            after_elements[i * dim..(i + 1) * dim].copy_from_slice(&elem);
+        }
+
+        // Step 2: truncate to P[t-1], recompose with new element + rest.
+        self.data.truncate(t * dim);
+        self.append(new_element);
+        for i in 0..num_after {
+            self.append(&after_elements[i * dim..(i + 1) * dim]);
+        }
     }
 
     /// σ for sub-sequence [i+1..j]. O(1).
