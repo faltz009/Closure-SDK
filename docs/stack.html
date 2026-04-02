@@ -3,42 +3,77 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="closure-asset-version" content="2026-04-01-1" />
   <title>Where we are — Closure</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=2026-04-01-1" />
 </head>
-<body class="has-ribbon">
+<body class="has-ribbon stack-triptych">
 
 <div id="ribbon-bg"></div>
 
 <nav class="site-nav" aria-label="Site navigation">
+  <div class="nav-left">
   <a class="nav-home" href="index.html">Closure</a>
   <span class="nav-sep">/</span>
-  <a href="origin.html">How we got here</a>
-  <span class="nav-dot">•</span>
-  <a href="stack.html" aria-current="page">Where we are</a>
-  <span class="nav-dot">•</span>
-  <a href="horizon.html">What the future holds</a>
-  <span class="nav-dot">•</span>
+  <span class="nav-triad">
+    <a aria-current="page" href="stack.html">Where we are</a>
+    <span class="nav-dot">•</span>
+    <a href="origin.html">How we got here</a>
+    <span class="nav-dot">•</span>
+    <a href="horizon.html">What the future holds</a>
+  </span>
+  <span class="nav-sep">/</span>
   <a href="supporting-models.html">Supporting Models</a>
-  <span class="nav-sep">/</span>
-  <a href="support.html">Support</a>
-  <span class="nav-dot">•</span>
-  <a href="collaborate.html">Collaborate</a>
-  <span class="nav-dot">•</span>
-  <a href="newsletter.html">Newsletter</a>
-  <span class="nav-sep">/</span>
-  <a href="about.html">About</a>
+</div>
+  <div class="nav-right">
+    <a class="nav-pill" href="seeing-code.html">Seeing Code</a>
+    <span class="nav-dot">•</span>
+    <a href="support.html">Support</a>
+    <span class="nav-dot">•</span>
+    <a href="collaborate.html">Collaborate</a>
+    <span class="nav-dot">•</span>
+    <a href="newsletter.html">Newsletter</a>
+    <span class="nav-sep">/</span>
+    <a href="about.html">About</a>
+  </div>
 </nav>
 
 <main>
-  <h1>Where we are</h1>
-  <p class="muted">
-    The stack is three layers. Each is functional, tested, and available now.
-  </p>
 
-  <!-- ── 1. DATA VERIFICATION ──────────────────────────── -->
+  <div class="triptych">
 
-  <div class="stack-block">
+    <button class="stack-panel active" data-section="section-verify">
+      <canvas id="panel-verify"></canvas>
+      <div class="panel-label">
+        <span class="panel-tag">Closure CLI</span>
+        <span class="panel-title">Data Integrity</span>
+        <span class="panel-sub">48&times; faster than Merkle trees</span>
+      </div>
+    </button>
+
+    <button class="stack-panel" data-section="section-storage">
+      <canvas id="panel-storage"></canvas>
+      <div class="panel-label">
+        <span class="panel-tag">Closure DNA</span>
+        <span class="panel-title">Data Storage</span>
+        <span class="panel-sub">Hierarchical organization native to the data</span>
+      </div>
+    </button>
+
+    <button class="stack-panel" data-section="section-learn">
+      <canvas id="panel-learn"></canvas>
+      <div class="panel-label">
+        <span class="panel-tag">Enkidu-Alive</span>
+        <span class="panel-title">Learning</span>
+        <span class="panel-sub">Computation without parameters</span>
+      </div>
+    </button>
+
+  </div>
+
+  <!-- ── Section content — revealed on panel click ──────────────────────── -->
+
+  <div id="section-verify" class="stack-section active">
     <div class="tag">Data Verification</div>
     <h2>Know whether your data arrived intact &mdash; and exactly what didn&rsquo;t</h2>
 
@@ -92,9 +127,7 @@
     </p>
   </div>
 
-  <!-- ── 2. GEOMETRIC DATABASE ─────────────────────────── -->
-
-  <div class="stack-block">
+  <div id="section-storage" class="stack-section">
     <div class="tag">Geometric Database</div>
     <h2>Storage with integrity built in</h2>
 
@@ -105,8 +138,8 @@
       Any record change, deletion, or insertion is detectable in microseconds.
     </p>
 
-    <h3>Benchmark against SQLite &mdash; 1,000,000 records (fair comparison)</h3>
-    <p class="muted small" style="margin-bottom: 0.8em;">
+    <h3>Benchmark against SQLite &mdash; 1,000,000 records</h3>
+    <p class="muted small" style="margin-bottom:0.8em;">
       SQLite has indexes on all filtered columns. Closure DNA wins on almost every axis.
     </p>
 
@@ -139,13 +172,6 @@
       </table>
     </div>
 
-    <h3>On disk space</h3>
-    <p>
-      Closure DNA uses 449.8&nbsp;MB for 1M records vs SQLite&rsquo;s 62.1&nbsp;MB.
-      The gap is the geometric sidecars: 186.1&nbsp;MB of composition trees that can
-      be deleted and regenerated at any time. The raw column data is 248.4&nbsp;MB.
-    </p>
-
     <div class="callout">
       <p>
         The sidecars are the key architectural point. Your raw data lives in one
@@ -153,7 +179,6 @@
         derived artifact, rebuildable from the columns. Two systems that want to
         confirm they hold identical data exchange a single composition product:
         one point on S&sup3;, 32&nbsp;bytes. Neither side exposes its records.
-        This is the verification primitive made persistent.
       </p>
     </div>
 
@@ -163,9 +188,7 @@
     </p>
   </div>
 
-  <!-- ── 3. LEARNING ARCHITECTURE ───────────────────────── -->
-
-  <div class="stack-block">
+  <div id="section-learn" class="stack-section">
     <div class="tag">Learning Architecture</div>
     <h2>Computation without parameters</h2>
 
@@ -186,8 +209,6 @@
     </p>
 
     <p>
-      Tested against Kaggle datasets and internal generalization benchmarks.
-      The agent generalizes to novel environments without retraining.
       <a href="enkidu.html">Run it live &rarr;</a>
     </p>
 
@@ -202,38 +223,49 @@
     </p>
 
     <p>
-      This is not a toy. It is the first step of a learning architecture where
-      the algebraic substrate of the stack is the model. Memory, verification, and
-      execution share one representation. The database is not a separate layer
-      from the compute. This is the direction of the work.
-    </p>
-
-    <h3>Supporting literature</h3>
-    <p>
-      Six current research directions independently converge on the same geometry:
-      world models in compact latent spaces, continuous vector representations
-      replacing discrete tokens, sheaf-theoretic distributed learning, hyperagent
-      self-reference, quantization that preserves geometric structure, and
-      evolutionary optimization at scale. The papers are in the repository.
-      The Closure architecture sits where they intersect.
+      Memory, verification, and execution share one representation. The database
+      is not a separate layer from the compute. This is the direction of the work.
     </p>
   </div>
 
 </main>
 
-<footer>
-  <a href="https://zenodo.org/records/19140055" target="_blank" rel="noopener">Paper (Zenodo)</a>
-  <a href="https://github.com/faltz009/Closure-SDK" target="_blank" rel="noopener">GitHub</a>
-  <a href="enkidu.html">Enkidu demo</a>
-</footer>
+
 
 <div class="ori-badge">
   <div class="ori-badge-ring"><canvas id="ori-canvas"></canvas></div>
   <span class="ori-badge-label">Open Research Institute</span>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
-<script src="ribbon.js"></script>
-<script src="shatter.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+<script defer src="ribbon.js?v=2026-04-01-1"></script>
+<script defer src="shatter.js?v=2026-04-01-1"></script>
+<script defer src="stack-panels.js?v=2026-04-01-1"></script>
+<script>
+(function () {
+  var panels   = document.querySelectorAll('.stack-panel');
+  var sections = document.querySelectorAll('.stack-section');
+
+  panels.forEach(function (panel) {
+    panel.addEventListener('click', function (e) {
+
+      // Ripple from click position
+      var rect   = panel.getBoundingClientRect();
+      var ripple = document.createElement('span');
+      ripple.className   = 'panel-ripple';
+      ripple.style.left  = (e.clientX - rect.left)  + 'px';
+      ripple.style.top   = (e.clientY - rect.top)   + 'px';
+      panel.appendChild(ripple);
+      setTimeout(function () { ripple.remove(); }, 600);
+
+      // Expand + reveal
+      panels.forEach(function (p)   { p.classList.remove('active'); });
+      sections.forEach(function (s) { s.classList.remove('active'); });
+      panel.classList.add('active');
+      document.getElementById(panel.dataset.section).classList.add('active');
+    });
+  });
+})();
+</script>
 </body>
 </html>

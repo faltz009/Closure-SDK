@@ -3,56 +3,94 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="closure-asset-version" content="2026-04-01-1" />
   <title>Supporting Models — Closure</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=2026-04-01-1" />
 </head>
 <body class="has-ribbon">
 
 <div id="ribbon-bg"></div>
 
 <nav class="site-nav" aria-label="Site navigation">
+  <div class="nav-left">
   <a class="nav-home" href="index.html">Closure</a>
   <span class="nav-sep">/</span>
-  <a href="origin.html">How we got here</a>
-  <span class="nav-dot">•</span>
-  <a href="stack.html">Where we are</a>
-  <span class="nav-dot">•</span>
-  <a href="horizon.html">What the future holds</a>
-  <span class="nav-dot">•</span>
-  <a href="supporting-models.html" aria-current="page">Supporting Models</a>
+  <span class="nav-triad">
+    <a href="stack.html">Where we are</a>
+    <span class="nav-dot">•</span>
+    <a href="origin.html">How we got here</a>
+    <span class="nav-dot">•</span>
+    <a href="horizon.html">What the future holds</a>
+  </span>
   <span class="nav-sep">/</span>
-  <a href="support.html">Support</a>
-  <span class="nav-dot">•</span>
-  <a href="collaborate.html">Collaborate</a>
-  <span class="nav-dot">•</span>
-  <a href="newsletter.html">Newsletter</a>
-  <span class="nav-sep">/</span>
-  <a href="about.html">About</a>
+  <a aria-current="page" href="supporting-models.html">Supporting Models</a>
+</div>
+  <div class="nav-right">
+    <a class="nav-pill" href="seeing-code.html">Seeing Code</a>
+    <span class="nav-dot">•</span>
+    <a href="support.html">Support</a>
+    <span class="nav-dot">•</span>
+    <a href="collaborate.html">Collaborate</a>
+    <span class="nav-dot">•</span>
+    <a href="newsletter.html">Newsletter</a>
+    <span class="nav-sep">/</span>
+    <a href="about.html">About</a>
+  </div>
 </nav>
 
 <main>
-  <div class="article">
-    <h1>Supporting Models</h1>
+  <div class="tag">Research Gallery</div>
+  <h1>Supporting Models</h1>
 
-    <p>
-      [Placeholder]
-    </p>
-  </div>
+  <p class="supporting-intro">
+    These papers sit near the same larger shift that Closure is pursuing: continuous prediction, structured
+    latent worlds, self-improving systems, geometric consistency, and compression that preserves computation.
+    Walk them one by one.
+  </p>
+
+  <section class="supporting-deck" id="supporting-deck" aria-label="Supporting models gallery">
+    <div class="supporting-scene">
+      <div class="supporting-text">
+        <div class="supporting-kicker-row">
+          <div class="tag" id="supporting-tag">Paper 01</div>
+          <div class="supporting-counter" id="supporting-counter">1 / 6</div>
+        </div>
+
+        <h2 id="supporting-title">Loading</h2>
+        <p class="supporting-authors" id="supporting-authors"></p>
+
+        <p class="supporting-abstract" id="supporting-abstract"></p>
+
+        <div class="supporting-rule"></div>
+
+        <div class="supporting-relation-head">Why It Matters for Closure</div>
+        <p class="supporting-relation-copy" id="supporting-relation"></p>
+
+        <a class="supporting-arxiv-link" id="supporting-arxiv" target="_blank" rel="noopener">Open on arXiv</a>
+      </div>
+
+      <div class="supporting-visual">
+        <button class="slide-arrow slide-arrow-prev" id="supporting-prev" type="button" aria-label="Previous paper">&#8592;</button>
+        <a class="supporting-poster-link" id="supporting-poster-link" target="_blank" rel="noopener">
+          <img id="supporting-image" class="supporting-image" alt="Paper first page" />
+        </a>
+        <button class="slide-arrow slide-arrow-next" id="supporting-next" type="button" aria-label="Next paper">&#8594;</button>
+        <div class="supporting-dots" id="supporting-dots" aria-label="Paper navigation"></div>
+      </div>
+    </div>
+  </section>
 </main>
 
-<footer>
-  <a href="https://zenodo.org/records/19140055" target="_blank" rel="noopener">Paper (Zenodo)</a>
-  <a href="https://github.com/faltz009/Closure-SDK" target="_blank" rel="noopener">GitHub</a>
-  <a href="enkidu.html">Enkidu demo</a>
-</footer>
+
 
 <div class="ori-badge">
   <div class="ori-badge-ring"><canvas id="ori-canvas"></canvas></div>
   <span class="ori-badge-label">Open Research Institute</span>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
-<script src="ribbon.js"></script>
-<script src="shatter.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+<script defer src="ribbon.js?v=2026-04-01-1"></script>
+<script defer src="shatter.js?v=2026-04-01-1"></script>
+<script defer src="supporting-models.js?v=2026-04-01-1"></script>
 </body>
 </html>

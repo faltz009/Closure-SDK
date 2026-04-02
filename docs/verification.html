@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="closure-asset-version" content="2026-04-01-1" />
+  <title>Verification — Closure</title>
+  <link rel="stylesheet" href="styles.css?v=2026-04-01-1" />
+</head>
+<body class="has-ribbon">
+
+<div id="ribbon-bg"></div>
+
+<nav class="site-nav" aria-label="Site navigation">
+  <div class="nav-left">
+  <a class="nav-home" href="index.html">Closure</a>
+  <span class="nav-sep">/</span>
+  <span class="nav-triad">
+    <a href="stack.html">Where we are</a>
+    <span class="nav-dot">•</span>
+    <a href="origin.html">How we got here</a>
+    <span class="nav-dot">•</span>
+    <a href="horizon.html">What the future holds</a>
+  </span>
+  <span class="nav-sep">/</span>
+  <a href="supporting-models.html">Supporting Models</a>
+</div>
+  <div class="nav-right">
+    <a class="nav-pill" href="seeing-code.html">Seeing Code</a>
+    <span class="nav-dot">•</span>
+    <a href="support.html">Support</a>
+    <span class="nav-dot">•</span>
+    <a href="collaborate.html">Collaborate</a>
+    <span class="nav-dot">•</span>
+    <a href="newsletter.html">Newsletter</a>
+    <span class="nav-sep">/</span>
+    <a href="about.html">About</a>
+  </div>
+</nav>
+
+<main>
+  <div class="stack-subnav">
+    <a href="stack.html">&larr; Where we are</a>
+    <span class="nav-dot">•</span>
+    <a href="verification.html" aria-current="page">Verification</a>
+    <span class="nav-dot">•</span>
+    <a href="storage.html">Storage</a>
+    <span class="nav-dot">•</span>
+    <a href="learning.html">Learning</a>
+  </div>
+
+  <div class="tag">Data Verification</div>
+  <h1>Know whether your data arrived intact &mdash; and exactly what didn&rsquo;t</h1>
+
+  <p>
+    The core primitive. Every record gets hashed and composed onto S&sup3;.
+    When a sequence is coherent, the composition closes back to where it started.
+    When it isn&rsquo;t, the product drifts, and the drift is exact: how much,
+    where in the sequence, and what kind of fault &mdash; missing record or reorder,
+    always distinguishable.
+  </p>
+
+  <p>
+    Two tools implement this. The CLI handles file-to-file comparison and live
+    stream monitoring. The <code>bind()</code> / <code>prism</code> functions handle
+    zero-knowledge verification: two parties confirm they hold the same data by
+    exchanging 16 bytes. The raw data never moves. Neither side can fake agreement.
+  </p>
+
+  <h2>Performance against Merkle trees (100,000 records)</h2>
+
+  <div class="bench-wrap">
+    <table class="bench">
+      <thead>
+        <tr>
+          <th>Faults</th>
+          <th class="r">Merkle tree</th>
+          <th class="r">Closure</th>
+          <th class="r">Speedup</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td>  <td class="r">368 ms</td>  <td class="r win">362 ms</td>  <td class="r">1&times;</td></tr>
+        <tr><td>5</td>  <td class="r">1.85 s</td>  <td class="r win">396 ms</td>  <td class="r win">4.7&times;</td></tr>
+        <tr><td>10</td> <td class="r">3.68 s</td>  <td class="r win">383 ms</td>  <td class="r win">9.6&times;</td></tr>
+        <tr><td>25</td> <td class="r">9.39 s</td>  <td class="r win">426 ms</td>  <td class="r win">22&times;</td></tr>
+        <tr><td>50</td> <td class="r">18.6 s</td>  <td class="r win">384 ms</td>  <td class="r win">48&times;</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    A Merkle tree must rebuild after every fault it finds &mdash; O(k&middot;n) for
+    k faults. This system composes both sequences once and classifies all faults in
+    a single walk. The cost is O(n) regardless of fault count.
+  </p>
+
+  <p class="muted small">
+    <code>pip install closure-sdk</code> &nbsp;&middot;&nbsp;
+    <code>pip install closure-cli</code> &nbsp;&middot;&nbsp;
+    <a href="https://github.com/faltz009/Closure-SDK" target="_blank" rel="noopener">GitHub</a>
+  </p>
+</main>
+
+
+
+<div class="ori-badge">
+  <div class="ori-badge-ring"><canvas id="ori-canvas"></canvas></div>
+  <span class="ori-badge-label">Open Research Institute</span>
+</div>
+
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+<script defer src="ribbon.js?v=2026-04-01-1"></script>
+<script defer src="shatter.js?v=2026-04-01-1"></script>
+</body>
+</html>

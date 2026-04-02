@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="closure-asset-version" content="2026-04-01-1" />
+  <title>Storage — Closure</title>
+  <link rel="stylesheet" href="styles.css?v=2026-04-01-1" />
+</head>
+<body class="has-ribbon">
+
+<div id="ribbon-bg"></div>
+
+<nav class="site-nav" aria-label="Site navigation">
+  <div class="nav-left">
+  <a class="nav-home" href="index.html">Closure</a>
+  <span class="nav-sep">/</span>
+  <span class="nav-triad">
+    <a href="stack.html">Where we are</a>
+    <span class="nav-dot">•</span>
+    <a href="origin.html">How we got here</a>
+    <span class="nav-dot">•</span>
+    <a href="horizon.html">What the future holds</a>
+  </span>
+  <span class="nav-sep">/</span>
+  <a href="supporting-models.html">Supporting Models</a>
+</div>
+  <div class="nav-right">
+    <a class="nav-pill" href="seeing-code.html">Seeing Code</a>
+    <span class="nav-dot">•</span>
+    <a href="support.html">Support</a>
+    <span class="nav-dot">•</span>
+    <a href="collaborate.html">Collaborate</a>
+    <span class="nav-dot">•</span>
+    <a href="newsletter.html">Newsletter</a>
+    <span class="nav-sep">/</span>
+    <a href="about.html">About</a>
+  </div>
+</nav>
+
+<main>
+  <div class="stack-subnav">
+    <a href="stack.html">&larr; Where we are</a>
+    <span class="nav-dot">•</span>
+    <a href="verification.html">Verification</a>
+    <span class="nav-dot">•</span>
+    <a href="storage.html" aria-current="page">Storage</a>
+    <span class="nav-dot">•</span>
+    <a href="learning.html">Learning</a>
+  </div>
+
+  <div class="tag">Geometric Database</div>
+  <h1>Storage with integrity built in</h1>
+
+  <p>
+    Closure DNA is a database where every column is a composition tree on S&sup3;.
+    The data lives in the structure, not alongside it. Integrity is not an
+    optional check you run afterward &mdash; it is native to how the data is held.
+    Any record change, deletion, or insertion is detectable in microseconds.
+  </p>
+
+  <h2>Benchmark against SQLite &mdash; 1,000,000 records</h2>
+  <p class="muted small" style="margin-bottom: 0.8em;">
+    SQLite has indexes on all filtered columns. Closure DNA wins on almost every axis.
+  </p>
+
+  <div class="bench-wrap">
+    <table class="bench">
+      <thead>
+        <tr>
+          <th>Operation</th>
+          <th class="r">Closure DNA</th>
+          <th class="r">SQLite</th>
+          <th class="r">Ratio</th>
+          <th>Winner</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Insert</td>                     <td class="r">786.6 ms</td>   <td class="r">934.8 ms</td>   <td class="r">1.2&times;</td>     <td class="win">Closure DNA</td></tr>
+        <tr><td>Get &times;1000</td>             <td class="r">669 &mu;s</td>  <td class="r">4.60 ms</td>    <td class="r">6.9&times;</td>     <td class="win">Closure DNA</td></tr>
+        <tr><td>Filter city=X (indexed)</td>     <td class="r">11.9 ms</td>    <td class="r">81.0 ms</td>    <td class="r">6.8&times;</td>     <td class="win">Closure DNA</td></tr>
+        <tr><td>Filter age&gt;50 (indexed)</td>  <td class="r">20.2 ms</td>    <td class="r">176.8 ms</td>   <td class="r">8.8&times;</td>     <td class="win">Closure DNA</td></tr>
+        <tr><td>city=X AND age&gt;50</td>        <td class="r">61.7 ms</td>    <td class="r">94.6 ms</td>    <td class="r">1.5&times;</td>     <td class="win">Closure DNA</td></tr>
+        <tr><td>AVG(score)</td>                  <td class="r">14.6 ms</td>    <td class="r">53.3 ms</td>    <td class="r">3.6&times;</td>     <td class="win">Closure DNA</td></tr>
+        <tr><td>Sort by age</td>                 <td class="r">73.0 ms</td>    <td class="r">385.0 ms</td>   <td class="r">5.3&times;</td>     <td class="win">Closure DNA</td></tr>
+        <tr><td>Update 1 row</td>                <td class="r">73.9 &mu;s</td> <td class="r">164.4 &mu;s</td><td class="r">2.2&times;</td>     <td class="win">Closure DNA</td></tr>
+        <tr><td>Delete 1 row</td>                <td class="r">34.4 &mu;s</td> <td class="r">84.8 &mu;s</td> <td class="r">2.5&times;</td>     <td class="win">Closure DNA</td></tr>
+        <tr class="gap"><td>Integrity check</td> <td class="r">11.7 &mu;s</td> <td class="r">1.05 s</td>     <td class="r win">89,885&times;</td><td class="win">Closure DNA</td></tr>
+        <tr><td>Resonance search</td>            <td class="r excl">836.8 ms</td><td class="r na">N/A</td>  <td class="r na">&mdash;</td>      <td class="excl">Exclusive</td></tr>
+        <tr><td>Table identity check</td>        <td class="r excl">13.9 &mu;s</td><td class="r na">N/A</td><td class="r na">&mdash;</td>      <td class="excl">Exclusive</td></tr>
+        <tr class="gap"><td>Cold start (reopen)</td><td class="r">376.8 &mu;s</td><td class="r win">78.1 &mu;s</td><td class="r">4.8&times;</td><td>SQLite</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>On disk space</h2>
+  <p>
+    Closure DNA uses 449.8&nbsp;MB for 1M records vs SQLite&rsquo;s 62.1&nbsp;MB.
+    The gap is the geometric sidecars: 186.1&nbsp;MB of composition trees that can
+    be deleted and regenerated at any time. The raw column data is 248.4&nbsp;MB.
+  </p>
+
+  <div class="callout">
+    <p>
+      The sidecars are the key architectural point. Your raw data lives in one
+      place. The geometric state &mdash; the verification layer &mdash; is a
+      derived artifact, rebuildable from the columns. Two systems that want to
+      confirm they hold identical data exchange a single composition product:
+      one point on S&sup3;, 32&nbsp;bytes. Neither side exposes its records.
+      This is the verification primitive made persistent.
+    </p>
+  </div>
+
+  <p class="muted small">
+    <code>pip install closure-dna</code> &nbsp;&middot;&nbsp;
+    <a href="https://github.com/faltz009/Closure-SDK" target="_blank" rel="noopener">GitHub</a>
+  </p>
+</main>
+
+
+
+<div class="ori-badge">
+  <div class="ori-badge-ring"><canvas id="ori-canvas"></canvas></div>
+  <span class="ori-badge-label">Open Research Institute</span>
+</div>
+
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+<script defer src="ribbon.js?v=2026-04-01-1"></script>
+<script defer src="shatter.js?v=2026-04-01-1"></script>
+</body>
+</html>

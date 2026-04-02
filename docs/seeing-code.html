@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="closure-asset-version" content="2026-04-01-1" />
+  <title>Seeing Code — Closure</title>
+  <link rel="stylesheet" href="styles.css?v=2026-04-01-1" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body class="has-ribbon">
+
+<div id="ribbon-bg"></div>
+
+<nav class="site-nav" aria-label="Site navigation">
+  <div class="nav-left">
+  <a class="nav-home" href="index.html">Closure</a>
+  <span class="nav-sep">/</span>
+  <span class="nav-triad">
+    <a href="stack.html">Where we are</a>
+    <span class="nav-dot">•</span>
+    <a href="origin.html">How we got here</a>
+    <span class="nav-dot">•</span>
+    <a href="horizon.html">What the future holds</a>
+  </span>
+  <span class="nav-sep">/</span>
+  <a href="supporting-models.html">Supporting Models</a>
+</div>
+  <div class="nav-right">
+    <a class="nav-pill" aria-current="page" href="seeing-code.html">Seeing Code</a>
+    <span class="nav-dot">•</span>
+    <a href="support.html">Support</a>
+    <span class="nav-dot">•</span>
+    <a href="collaborate.html">Collaborate</a>
+    <span class="nav-dot">•</span>
+    <a href="newsletter.html">Newsletter</a>
+    <span class="nav-sep">/</span>
+    <a href="about.html">About</a>
+  </div>
+</nav>
+
+<main>
+  <div class="tag">Execution Gallery</div>
+  <h1>Seeing Code</h1>
+
+  <p>
+    Each work below comes from a real trace. Click a title to open it.
+  </p>
+
+  <div class="seeing-gallery" id="seeing-gallery" aria-label="Seeing Code gallery"></div>
+
+  <section class="gallery-card gallery-hero">
+    <div class="gallery-copy">
+      <h2 id="piece-title">Append Inverse</h2>
+      <p id="piece-description">
+        The program is executed in <code>closure_ea/vm</code>. After each instruction,
+        we save the actual machine state on S&sup3;. The final appended inverse closes the
+        trace back to identity, so the program becomes a sealed spatial loop.
+      </p>
+      <pre class="piece-source" id="piece-source"></pre>
+      <div class="metric-grid">
+        <div>
+          <span class="metric-label">Trace</span>
+          <strong id="metric-step">Loading</strong>
+        </div>
+        <div>
+          <span class="metric-label">Sigma</span>
+          <strong id="metric-sigma">0.0000</strong>
+        </div>
+        <div>
+          <span class="metric-label">Branch</span>
+          <strong id="metric-branch">Start</strong>
+        </div>
+        <div>
+          <span class="metric-label">Projection</span>
+          <strong id="metric-product">stereographic</strong>
+        </div>
+      </div>
+      <p class="caption" id="piece-caption">
+        Blue points are ordinary execution states. The amber point is the appended inverse.
+        The green point is closure at identity. The camera drifts so the code reads as an object.
+      </p>
+    </div>
+
+    <div class="gallery-stage">
+      <canvas id="seeing-code-canvas" class="gallery-canvas" width="960" height="620"></canvas>
+      <div class="gallery-legend">
+        <span><i class="legend-chip chip-query"></i>Program states</span>
+        <span><i class="legend-chip chip-value"></i>Appended inverse</span>
+        <span><i class="legend-chip chip-hit"></i>Live traversal</span>
+        <span><i class="legend-chip chip-closure"></i>Closure</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+
+
+<div class="ori-badge">
+  <div class="ori-badge-ring"><canvas id="ori-canvas"></canvas></div>
+  <span class="ori-badge-label">Open Research Institute</span>
+</div>
+
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+<script defer src="ribbon.js?v=2026-04-01-1"></script>
+<script defer src="shatter.js?v=2026-04-01-1"></script>
+<script type="module" src="seeing-code.js?v=2026-04-01-1"></script>
+</body>
+</html>

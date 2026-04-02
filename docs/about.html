@@ -3,72 +3,218 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="closure-asset-version" content="2026-04-01-1" />
   <title>About — Closure</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=2026-04-01-1" />
 </head>
 <body class="has-ribbon">
 
 <div id="ribbon-bg"></div>
 
 <nav class="site-nav" aria-label="Site navigation">
+  <div class="nav-left">
   <a class="nav-home" href="index.html">Closure</a>
   <span class="nav-sep">/</span>
-  <a href="origin.html">How we got here</a>
-  <span class="nav-dot">•</span>
-  <a href="stack.html">Where we are</a>
-  <span class="nav-dot">•</span>
-  <a href="horizon.html">What the future holds</a>
-  <span class="nav-dot">•</span>
+  <span class="nav-triad">
+    <a href="stack.html">Where we are</a>
+    <span class="nav-dot">•</span>
+    <a href="origin.html">How we got here</a>
+    <span class="nav-dot">•</span>
+    <a href="horizon.html">What the future holds</a>
+  </span>
+  <span class="nav-sep">/</span>
   <a href="supporting-models.html">Supporting Models</a>
-  <span class="nav-sep">/</span>
-  <a href="support.html">Support</a>
-  <span class="nav-dot">•</span>
-  <a href="collaborate.html">Collaborate</a>
-  <span class="nav-dot">•</span>
-  <a href="newsletter.html">Newsletter</a>
-  <span class="nav-sep">/</span>
-  <a href="about.html" aria-current="page">About</a>
+</div>
+  <div class="nav-right">
+    <a class="nav-pill" href="seeing-code.html">Seeing Code</a>
+    <span class="nav-dot">•</span>
+    <a href="support.html">Support</a>
+    <span class="nav-dot">•</span>
+    <a href="collaborate.html">Collaborate</a>
+    <span class="nav-dot">•</span>
+    <a href="newsletter.html">Newsletter</a>
+    <span class="nav-sep">/</span>
+    <a aria-current="page" href="about.html">About</a>
+  </div>
 </nav>
 
 <main>
-  <div class="article">
-    <h1>About</h1>
+  <div class="split">
 
-    <p>
-      [Placeholder &mdash; Walter&rsquo;s background, the research context,
-      and the project history in brief.]
-    </p>
+    <div>
+      <h1>About</h1>
 
-    <p>
-      The foundational paper:
-      <a href="https://zenodo.org/records/19140055" target="_blank" rel="noopener">
-        Zeroth Law of Sequence Integrity (Zenodo)
-      </a>
-    </p>
+      <p>
+        [Placeholder &mdash; Walter&rsquo;s background, the research context,
+        and the project history in brief.]
+      </p>
 
-    <p>
-      The code: <a href="https://github.com/faltz009/Closure-SDK" target="_blank" rel="noopener">github.com/faltz009/Closure-SDK</a>
-    </p>
+      <p>
+        The foundational paper:
+        <a href="https://zenodo.org/records/19140055" target="_blank" rel="noopener">
+          Zeroth Law of Sequence Integrity (Zenodo)
+        </a>
+      </p>
 
-    <p>
-      Contact: <a href="mailto:walter.h057@gmail.com">walter.h057@gmail.com</a>
-    </p>
+      <p>
+        The code: <a href="https://github.com/faltz009/Closure-SDK" target="_blank" rel="noopener">github.com/faltz009/Closure-SDK</a>
+      </p>
+
+      <p>
+        Contact: <a href="mailto:walter.h057@gmail.com">walter.h057@gmail.com</a>
+      </p>
+    </div>
+
+    <div style="display:flex; align-items:flex-start; justify-content:center;">
+      <div class="about-portrait-wrap">
+        <img src="walter.jpg" class="about-portrait-photo" alt="Walter" />
+        <canvas id="about-ring-canvas"></canvas>
+      </div>
+    </div>
+
   </div>
 </main>
 
-<footer>
-  <a href="https://zenodo.org/records/19140055" target="_blank" rel="noopener">Paper (Zenodo)</a>
-  <a href="https://github.com/faltz009/Closure-SDK" target="_blank" rel="noopener">GitHub</a>
-  <a href="enkidu.html">Enkidu demo</a>
-</footer>
+
 
 <div class="ori-badge">
   <div class="ori-badge-ring"><canvas id="ori-canvas"></canvas></div>
   <span class="ori-badge-label">Open Research Institute</span>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
-<script src="ribbon.js"></script>
-<script src="shatter.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+<script defer src="ribbon.js?v=2026-04-01-1"></script>
+<script defer src="shatter.js?v=2026-04-01-1"></script>
+<script>
+// Big ORI ring portrait — reuses window._oriImg set by shatter.js
+(function () {
+  var canvas = document.getElementById('about-ring-canvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W, H, particles = [], mx = 0, my = 0, isDown = false;
+
+  function resize() {
+    var size = canvas.parentElement.offsetWidth || 360;
+    W = canvas.width  = size;
+    H = canvas.height = size;
+    canvas.style.width  = size + 'px';
+    canvas.style.height = size + 'px';
+  }
+
+  function Particle(ox, oy, r, g, b, size) {
+    this.x = ox; this.y = oy;
+    this.ox = ox; this.oy = oy;
+    this.r = r; this.g = g; this.b = b;
+    this.size = size; this.baseSize = size;
+    this.vx = (Math.random() - 0.5) * 0.07;
+    this.vy = (Math.random() - 0.5) * 0.07;
+    this.friction    = 0.94 + Math.random() * 0.03;
+    this.spring      = 0.007 + Math.random() * 0.003;
+    this.wanderAngle = Math.random() * Math.PI * 2;
+    this.wanderSpeed = 0.005 + Math.random() * 0.005;
+    this.opacity     = 1;
+  }
+
+  Particle.prototype.update = function () {
+    this.opacity = 1;
+    this.vx += (this.ox - this.x) * this.spring;
+    this.vy += (this.oy - this.y) * this.spring;
+    this.wanderAngle += this.wanderSpeed;
+    this.vx += Math.cos(this.wanderAngle) * 0.007;
+    this.vy += Math.sin(this.wanderAngle) * 0.007;
+    if (isDown) {
+      var dx = this.x - mx, dy = this.y - my;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      var radius = 80;
+      if (dist < radius && dist > 0) {
+        var force = (radius - dist) / radius;
+        var angle = Math.atan2(dy, dx);
+        this.vx += Math.cos(angle) * force * force * 1.4;
+        this.vy += Math.sin(angle) * force * force * 1.4;
+        this.size = this.baseSize * (1 + force * 0.9);
+      } else {
+        this.size += (this.baseSize - this.size) * 0.1;
+      }
+    } else {
+      this.size += (this.baseSize - this.size) * 0.1;
+    }
+    this.vx *= this.friction;
+    this.vy *= this.friction;
+    this.x  += this.vx;
+    this.y  += this.vy;
+  };
+
+  Particle.prototype.draw = function () {
+    ctx.globalAlpha = this.opacity;
+    ctx.fillStyle = 'rgb(' + this.r + ',' + this.g + ',' + this.b + ')';
+    var s    = Math.max(1, this.size);
+    var half = s / 2;
+    var rad  = s > 4 ? 2 : 1;
+    ctx.beginPath();
+    ctx.moveTo(this.x - half + rad, this.y - half);
+    ctx.lineTo(this.x + half - rad, this.y - half);
+    ctx.quadraticCurveTo(this.x + half, this.y - half,  this.x + half, this.y - half + rad);
+    ctx.lineTo(this.x + half, this.y + half - rad);
+    ctx.quadraticCurveTo(this.x + half, this.y + half,  this.x + half - rad, this.y + half);
+    ctx.lineTo(this.x - half + rad, this.y + half);
+    ctx.quadraticCurveTo(this.x - half, this.y + half,  this.x - half, this.y + half - rad);
+    ctx.lineTo(this.x - half, this.y - half + rad);
+    ctx.quadraticCurveTo(this.x - half, this.y - half,  this.x - half + rad, this.y - half);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  };
+
+  function buildParticles() {
+    var img = window._oriImg;
+    if (!img) return;
+    particles = [];
+    var scale = Math.min((W * 0.88) / img.width, (H * 0.88) / img.height, 1);
+    var iw    = Math.floor(img.width  * scale);
+    var ih    = Math.floor(img.height * scale);
+    var ox    = Math.floor((W - iw) / 2);
+    var oy    = Math.floor((H - ih) / 2);
+    var oc    = document.createElement('canvas');
+    oc.width = iw; oc.height = ih;
+    var octx  = oc.getContext('2d');
+    octx.drawImage(img, 0, 0, iw, ih);
+    var data   = octx.getImageData(0, 0, iw, ih).data;
+    var target = Math.min(15000, Math.max(6000, (iw * ih) / 11));
+    var gap    = Math.max(2, Math.floor(Math.sqrt((iw * ih) / target)));
+    var pSize  = gap * 0.95;
+    for (var y = 0; y < ih; y += gap) {
+      for (var x = 0; x < iw; x += gap) {
+        var i = (y * iw + x) * 4;
+        if (data[i + 3] < 128) continue;
+        particles.push(new Particle(ox + x, oy + y, data[i], data[i+1], data[i+2], pSize));
+      }
+    }
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+    for (var i = 0; i < particles.length; i++) {
+      particles[i].update();
+      particles[i].draw();
+    }
+    requestAnimationFrame(render);
+  }
+
+  canvas.addEventListener('pointermove', function (e) {
+    var r = canvas.getBoundingClientRect();
+    mx = e.clientX - r.left;
+    my = e.clientY - r.top;
+  });
+  canvas.addEventListener('pointerleave', function () { isDown = false; });
+  canvas.addEventListener('pointerdown',  function () { isDown = true; });
+  canvas.addEventListener('pointerup',    function () { isDown = false; });
+  window.addEventListener('resize', function () { resize(); buildParticles(); });
+
+  resize();
+  (function tryBuild() {
+    if (window._oriImg) { buildParticles(); render(); }
+    else setTimeout(tryBuild, 50);
+  })();
+})();
+</script>
 </body>
 </html>

@@ -28,29 +28,23 @@
   // ── Particle ──────────────────────────────────────────────────────────────
   class Particle {
     constructor(ox, oy, r, g, b, size) {
-      // spawn from random edge
-      const edge = Math.random();
-      if      (edge < 0.25) { this.x = Math.random() * W; this.y = -40; }
-      else if (edge < 0.5)  { this.x = Math.random() * W; this.y = H + 40; }
-      else if (edge < 0.75) { this.x = -40; this.y = Math.random() * H; }
-      else                  { this.x = W + 40; this.y = Math.random() * H; }
-
+      this.x = ox; this.y = oy;
       this.ox = ox; this.oy = oy;
       this.r = r; this.g = g; this.b = b;
       this.size = size; this.baseSize = size;
 
-      this.vx = (ox - this.x) * 0.003 + (Math.random() - 0.5) * 0.07;
-      this.vy = (oy - this.y) * 0.003 + (Math.random() - 0.5) * 0.07;
+      this.vx = (Math.random() - 0.5) * 0.07;
+      this.vy = (Math.random() - 0.5) * 0.07;
 
       this.friction      = 0.94 + Math.random() * 0.03;
       this.spring        = 0.007 + Math.random() * 0.003;
       this.wanderAngle   = Math.random() * Math.PI * 2;
       this.wanderSpeed   = 0.005 + Math.random() * 0.005;
-      this.opacity       = 0;
+      this.opacity       = 1;
     }
 
     update() {
-      this.opacity = Math.min(1, this.opacity + 0.05);
+      this.opacity = 1;
 
       // spring toward origin
       this.vx += (this.ox - this.x) * this.spring;

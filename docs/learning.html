@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="closure-asset-version" content="2026-04-01-1" />
+  <title>Learning — Closure</title>
+  <link rel="stylesheet" href="styles.css?v=2026-04-01-1" />
+</head>
+<body class="has-ribbon">
+
+<div id="ribbon-bg"></div>
+
+<nav class="site-nav" aria-label="Site navigation">
+  <div class="nav-left">
+  <a class="nav-home" href="index.html">Closure</a>
+  <span class="nav-sep">/</span>
+  <span class="nav-triad">
+    <a href="stack.html">Where we are</a>
+    <span class="nav-dot">•</span>
+    <a href="origin.html">How we got here</a>
+    <span class="nav-dot">•</span>
+    <a href="horizon.html">What the future holds</a>
+  </span>
+  <span class="nav-sep">/</span>
+  <a href="supporting-models.html">Supporting Models</a>
+</div>
+  <div class="nav-right">
+    <a class="nav-pill" href="seeing-code.html">Seeing Code</a>
+    <span class="nav-dot">•</span>
+    <a href="support.html">Support</a>
+    <span class="nav-dot">•</span>
+    <a href="collaborate.html">Collaborate</a>
+    <span class="nav-dot">•</span>
+    <a href="newsletter.html">Newsletter</a>
+    <span class="nav-sep">/</span>
+    <a href="about.html">About</a>
+  </div>
+</nav>
+
+<main>
+  <div class="stack-subnav">
+    <a href="stack.html">&larr; Where we are</a>
+    <span class="nav-dot">•</span>
+    <a href="verification.html">Verification</a>
+    <span class="nav-dot">•</span>
+    <a href="storage.html">Storage</a>
+    <span class="nav-dot">•</span>
+    <a href="learning.html" aria-current="page">Learning</a>
+  </div>
+
+  <div class="tag">Learning Architecture</div>
+  <h1>Computation without parameters</h1>
+
+  <p>
+    Enkidu is a prototype agent that forages, builds shelter, and survives in a
+    hostile environment. It has no neural network, no trained weights, no learned
+    parameters whatsoever. Every decision is a single geometric comparison:
+    which distance from identity is larger, and which action most reduces it.
+  </p>
+
+  <p>
+    The environment computes the gradient. Identity is homeostasis. Free energy
+    is geodesic distance from identity on S&sup3;. The geometry supplies the path
+    home. Everything you see in the demo &mdash; the foraging routes, the
+    hesitation when drives are balanced, the camps extending his territory in
+    scarce environments &mdash; emerges from that one operation applied
+    repeatedly to a world that refuses to leave him at rest.
+  </p>
+
+  <p>
+    Tested against Kaggle datasets and internal generalization benchmarks.
+    The agent generalizes to novel environments without retraining.
+    <a href="enkidu.html">Run it live &rarr;</a>
+  </p>
+
+  <h2>Why this matters beyond the demo</h2>
+
+  <p>
+    A transformer learns attention through millions of parameters trained on
+    billions of tokens. Friston&rsquo;s Free Energy Principle describes the
+    same process through variational calculus. Enkidu computes both directly:
+    compose, measure distance from identity, act on the largest. The
+    correspondence is not metaphorical &mdash; it is exact.
+  </p>
+
+  <p>
+    This is not a toy. It is the first step of a learning architecture where
+    the algebraic substrate of the stack is the model. Memory, verification, and
+    execution share one representation. The database is not a separate layer
+    from the compute. This is the direction of the work.
+  </p>
+
+  <h2>Supporting literature</h2>
+  <p>
+    Six current research directions independently converge on the same geometry:
+    world models in compact latent spaces, continuous vector representations
+    replacing discrete tokens, sheaf-theoretic distributed learning, hyperagent
+    self-reference, quantization that preserves geometric structure, and
+    evolutionary optimization at scale. The papers are in the repository.
+    The Closure architecture sits where they intersect.
+  </p>
+</main>
+
+
+
+<div class="ori-badge">
+  <div class="ori-badge-ring"><canvas id="ori-canvas"></canvas></div>
+  <span class="ori-badge-label">Open Research Institute</span>
+</div>
+
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+<script defer src="ribbon.js?v=2026-04-01-1"></script>
+<script defer src="shatter.js?v=2026-04-01-1"></script>
+</body>
+</html>
