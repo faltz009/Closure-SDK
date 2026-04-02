@@ -119,3 +119,5 @@ closure_ea/**/.pytest_cache/
 closure_ea/vm/target/
 closure_ea/dna/**/*.lock
 closure_ea/dna/demo/coffee_store/output/
+
+!.github/workflows/pages.yml
