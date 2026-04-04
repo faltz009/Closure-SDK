@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Shape Gallery</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #f5f4f0; font-family: sans-serif; padding: 32px; }
+  h1 { color: #335c59; font-size: 18px; margin-bottom: 24px; letter-spacing: .04em; }
+  .grid { display: grid; grid-template-columns: repeat(3, 280px); gap: 24px; }
+  .card { background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  canvas { display: block; }
+  .label { color: #335c59; font-size: 13px; padding: 10px 14px; font-weight: 600; letter-spacing: .03em; }
+  .sub   { color: #8aa; font-size: 11px; padding: 0 14px 10px; }
+</style>
+</head>
+<body>
+<h1>Shape options for scene 5</h1>
+<div class="grid" id="grid"></div>
+
+<script>
+const NP = 300, W = 280, H = 240, CX = 140, CY = 120, R = 90;
+const COLOR = "rgba(51,92,89,";
+
+// ── shape generators ──────────────────────────────────────────────────────
+
+function fibSphere(n) {
+  const out = [], gr = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < n; i++) {
+    const y = 1 - (i / (n - 1)) * 2, r = Math.sqrt(1 - y * y);
+    const th = gr * i;
+    out.push(r * Math.cos(th), y, r * Math.sin(th));
+  }
+  return out;
+}
+
+// 1. Lorenz attractor — radial push to open up the dense core
+function lorenzPts(n) {
+  let x = 0.1, y = 0, z = 0;
+  const σ=10, ρ=28, β=8/3, dt=0.005;
+  for (let i = 0; i < 2000; i++) {
+    const dx=σ*(y-x), dy=x*(ρ-z)-y, dz=x*y-β*z;
+    x+=dx*dt; y+=dy*dt; z+=dz*dt;
+  }
+  const raw = [];
+  for (let i = 0; raw.length/3 < n; i++) {
+    const dx=σ*(y-x), dy=x*(ρ-z)-y, dz=x*y-β*z;
+    x+=dx*dt; y+=dy*dt; z+=dz*dt;
+    if (i%4===0) raw.push(x/20, (z-25)/25, y/25);
+  }
+  const out = [];
+  for (let i = 0; i < raw.length; i+=3) {
+    const px=raw[i], py=raw[i+1], pz=raw[i+2];
+    const r = Math.sqrt(px*px+py*py+pz*pz)+1e-9;
+    const s = Math.pow(r, 0.55)/r * 1.1;
+    out.push(px*s, py*s, pz*s);
+  }
+  return out;
+}
+
+// 2. Plain torus (displaced from main sequence)
+function torusPts(n) {
+  const Rm=0.62, Rt=0.24, out=[];
+  const nu=Math.max(4, Math.round(Math.sqrt(n*Rm/Rt*2)));
+  const nv=Math.ceil(n/nu);
+  for (let i=0; i<nu; i++)
+    for (let j=0; j<nv && out.length/3<n; j++) {
+      const u=(i/nu)*Math.PI*2, v=(j/nv)*Math.PI*2;
+      out.push((Rm+Rt*Math.cos(v))*Math.cos(u), Rt*Math.sin(v), (Rm+Rt*Math.cos(v))*Math.sin(u));
+    }
+  return out;
+}
+
+// 3. Trefoil (2,3) knot
+function trefoilPts(n) {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const t = (i/n)*Math.PI*2;
+    out.push(
+      (Math.sin(t) + 2*Math.sin(2*t)) * 0.30,
+      (Math.cos(t) - 2*Math.cos(2*t)) * 0.30,
+      (-Math.sin(3*t)) * 0.30
+    );
+  }
+  return out;
+}
+
+// 4. 3D Lissajous
+function lissajousPts(n) {
+  const out = [];
+  const a=3, b=4, c=5, δ1=Math.PI/4, δ2=Math.PI/3;
+  for (let i = 0; i < n; i++) {
+    const t = (i/n)*Math.PI*2;
+    out.push(Math.sin(a*t+δ1)*0.85, Math.sin(b*t)*0.85, Math.sin(c*t+δ2)*0.85);
+  }
+  return out;
+}
+
+// 5. Diamond cubic lattice
+function diamondPts(n) {
+  // FCC basis + 2-atom basis
+  const out = [], s = 5;
+  const fcc = [[0,0,0],[0,.5,.5],[.5,0,.5],[.5,.5,0]];
+  const basis = [[0,0,0],[.25,.25,.25]];
+  const pts = [];
+  for (let ix=-s; ix<=s; ix++)
+    for (let iy=-s; iy<=s; iy++)
+      for (let iz=-s; iz<=s; iz++)
+        for (const f of fcc)
+          for (const b of basis) {
+            const x=ix+f[0]+b[0], y=iy+f[1]+b[1], z=iz+f[2]+b[2];
+            if (Math.abs(x)<=2.6&&Math.abs(y)<=2.6&&Math.abs(z)<=2.6)
+              pts.push(x/2.6*0.85, y/2.6*0.85, z/2.6*0.85);
+          }
+  // subsample to n
+  const step = Math.max(1, Math.floor(pts.length/3/n));
+  for (let i = 0; i < pts.length && out.length/3 < n; i += 3*step)
+    out.push(pts[i], pts[i+1], pts[i+2]);
+  return out;
+}
+
+// 6. Hopf fibration — uniform eta spacing, clamp projection so poles don't pile up
+function hopfPts(n) {
+  const out = [];
+  const nf = 22, nc = Math.ceil(n/nf);
+  for (let i = 0; i < nf; i++) {
+    // uniform in cos(eta) → equal-area latitude bands, avoids pole crowding
+    const eta = Math.acos(1 - 2*(i+0.5)/nf);
+    const phi = (i/nf) * Math.PI*4;
+    for (let j = 0; j < nc && out.length/3 < n; j++) {
+      const t = (j/nc)*Math.PI*2;
+      const s1x = Math.cos(eta)*Math.cos(t+phi);
+      const s1y = Math.cos(eta)*Math.sin(t+phi);
+      const s1z = Math.sin(eta)*Math.cos(t);
+      const s1w = Math.sin(eta)*Math.sin(t);
+      // clamp denominator so the south-pole singularity doesn't compress everything
+      const d = 1/(Math.max(0.3, 1-s1w));
+      out.push(s1x*d*0.32, s1y*d*0.32, s1z*d*0.32);
+    }
+  }
+  return out;
+}
+
+// ── render ────────────────────────────────────────────────────────────────
+
+const shapes = [
+  { name: "Lorenz Attractor",    sub: "chaotic trajectory, butterfly twin lobes", fn: lorenzPts  },
+  { name: "Plain Torus",         sub: "displaced from main sequence",              fn: torusPts   },
+  { name: "Trefoil Knot",        sub: "simplest non-trivial knot (2,3)",           fn: trefoilPts },
+  { name: "3D Lissajous",        sub: "a=3 b=4 c=5 — fills a cube with paths",   fn: lissajousPts },
+  { name: "Diamond Lattice",     sub: "FCC cubic crystal, like carbon atoms",     fn: diamondPts },
+  { name: "Hopf Fibration",      sub: "circles on a 4D sphere, projected to 3D", fn: hopfPts    },
+];
+
+const LINK2 = (0.36)*(0.36);
+
+shapes.forEach(({ name, sub, fn }, idx) => {
+  const card = document.createElement("div");
+  card.className = "card";
+  const cv = document.createElement("canvas");
+  cv.width = W; cv.height = H;
+  const lb = document.createElement("div"); lb.className = "label"; lb.textContent = name;
+  const sb = document.createElement("div"); sb.className = "sub";   sb.textContent = sub;
+  card.appendChild(cv); card.appendChild(lb); card.appendChild(sb);
+  document.getElementById("grid").appendChild(card);
+
+  const ctx = cv.getContext("2d");
+  const pts = fn(NP);
+
+  function frame(now) {
+    requestAnimationFrame(frame);
+    const t = now * 0.001;
+    const cosA=Math.cos(t*0.23), sinA=Math.sin(t*0.23);
+    const cosB=Math.cos(t*0.11), sinB=Math.sin(t*0.11);
+
+    // project
+    const px=[], py=[], pz=[];
+    for (let i=0; i<pts.length; i+=3) {
+      const x=pts[i], y=pts[i+1], z=pts[i+2];
+      const x2=x*cosA+z*sinA, z2=-x*sinA+z*cosA;
+      const y2=y*cosB-z2*sinB, z3=y*sinB+z2*cosB;
+      px.push(CX+x2*R); py.push(CY-y2*R); pz.push(z3);
+    }
+
+    ctx.clearRect(0,0,W,H);
+
+    // lines
+    ctx.beginPath();
+    ctx.strokeStyle = COLOR+"0.15)";
+    ctx.lineWidth = 0.7;
+    for (let i=0; i<px.length; i++)
+      for (let j=i+1; j<px.length; j++) {
+        const dx=(px[i]-px[j])/R, dy=(py[i]-py[j])/R;
+        if (dx*dx+dy*dy < LINK2) { ctx.moveTo(px[i],py[i]); ctx.lineTo(px[j],py[j]); }
+      }
+    ctx.stroke();
+
+    // dots
+    for (let i=0; i<px.length; i++) {
+      const depth = (pz[i]+1)/2;
+      const alpha = 0.4 + depth*0.5;
+      const r = 1.2 + depth*1.4;
+      ctx.beginPath();
+      ctx.arc(px[i],py[i],r,0,Math.PI*2);
+      ctx.fillStyle = COLOR+alpha.toFixed(2)+")";
+      ctx.fill();
+    }
+  }
+  requestAnimationFrame(frame);
+});
+</script>
+</body>
+</html>
