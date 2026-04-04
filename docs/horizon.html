@@ -3,9 +3,83 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="closure-asset-version" content="2026-04-01-1" />
   <title>What the future holds — Closure</title>
-  <link rel="stylesheet" href="styles.css?v=2026-04-01-1" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body.has-ribbon main { padding: 0; overflow: hidden; }
+
+    /* Two-column wrapper: normal flow, sized to fit viewport in the card */
+    .hz-wrapper {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: 900px;
+    }
+
+    /* Left column: snap-scroll slides */
+    .hz-slides {
+      overflow-y: scroll;
+      scroll-snap-type: y mandatory;
+      height: 100%;
+      border-right: 1px solid #e8e8e8;
+    }
+    /* widen the page for this layout */
+    body { --max-w: 1440px; }
+
+    .hz-slide {
+      height: 900px;
+      scroll-snap-align: start;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 3rem 4rem;
+      background: #fff;
+    }
+
+    .hz-slide h1 { font-size: 2rem;   margin-bottom: 0.75em; }
+    .hz-slide h2 { font-size: 1.45rem; margin-bottom: 0.7em; }
+    .hz-slide p  { margin-bottom: 0.85em; }
+    .hz-slide p:last-child { margin-bottom: 0; }
+
+    /* Right column: canvas centered */
+    .hz-canvas-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #fafafa;
+      padding: 2rem;
+      gap: 16px;
+    }
+
+    #webgl-canvas {
+      display: block;
+      width: min(80%, 440px);
+      height: min(80%, 440px);
+      border-radius: 4px;
+      aspect-ratio: 1;
+    }
+
+    .hz-dots {
+      display: flex;
+      gap: 7px;
+    }
+    .scene-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: #ccc;
+      transition: background .3s, transform .3s;
+    }
+    .scene-dot.active { background: #1a1a1a; transform: scale(1.6); }
+
+    @media (max-width: 740px) {
+      .hz-wrapper { position: relative; top: 0; grid-template-columns: 1fr; height: auto; }
+      .hz-slides  { height: auto; overflow-y: visible; scroll-snap-type: none; }
+      .hz-slide   { height: auto; min-height: 100vh; }
+      .hz-canvas-col { height: 70vw; }
+      #webgl-canvas  { width: min(80vw, 380px); height: min(80vw, 380px); }
+      .site-nav { position: sticky; }
+    }
+  </style>
 </head>
 <body class="has-ribbon">
 
@@ -24,8 +98,7 @@
       <a aria-current="page" href="horizon.html">What the future holds</a>
       <a href="supporting-models.html">Supporting Models</a>
       <a class="nav-mobile-accent" href="seeing-code.html">Seeing Code</a>
-      <a href="support.html">Support</a>
-      <a href="collaborate.html">Collaborate</a>
+      <a href="support.html">Support &amp; Collaborate</a>
       <a href="newsletter.html">Newsletter</a>
       <a href="about.html">About</a>
     </div>
@@ -46,9 +119,7 @@
   <div class="nav-right">
     <a class="nav-pill" href="seeing-code.html">Seeing Code</a>
     <span class="nav-dot">•</span>
-    <a href="support.html">Support</a>
-    <span class="nav-dot">•</span>
-    <a href="collaborate.html">Collaborate</a>
+    <a href="support.html">Support &amp; Collaborate</a>
     <span class="nav-dot">•</span>
     <a href="newsletter.html">Newsletter</a>
     <span class="nav-sep">/</span>
@@ -57,100 +128,215 @@
 </nav>
 
 <main>
-  <div class="article">
-    <h1>What the future holds</h1>
+<div class="hz-wrapper">
 
-    <p>
-      If the algebraic primitive becomes the standard, several things change at once.
-      Not incrementally. Structurally.
-    </p>
+  <!-- Left: snap-scroll text slides -->
+  <div class="hz-slides" id="hz-slides">
 
-    <h3>The architecture is post-von Neumann</h3>
-    <p>
-      In a von Neumann machine, data and instructions are separate objects. State
-      is an address. Memory is passive. Closure reverses this: the state <em>is</em>
-      the composition product. Memory operates on itself. Programs and data share
-      the same representation, because they are the same kind of thing. Integrity
-      is not checked afterward &mdash; it is native to the structure.
-    </p>
+    <section class="hz-slide" data-scene="0">
+      <h2>Intelligence</h2>
+      <p>
+        An LLM that fits in your phone instead of a datacenter, that learns rules
+        directly from data without RLHF or a separate training phase, without the
+        infrastructure that makes intelligence something you rent instead of something
+        you own — that is what a geometric computer produces, because learning is part
+        of the runtime and the geometry already knows what learning is.
+      </p>
+      <p>
+        The same architecture that understands a sentence understands a heartbeat,
+        a radar return, a factory floor, a genome — language is one substrate for
+        this computation, and the adaptation mechanism is the representation itself,
+        which doesn't care what it's representing.
+      </p>
+      <p>
+        A geometric computer produces intelligence as a material: parts that can
+        adapt to whatever substrate you put them in, embedded wherever reality
+        produces a signal worth understanding.
+      </p>
+    </section>
 
-    <p>
-      This is not a theoretical observation. It describes the stack as it exists
-      today: the verification layer, the database, and the learning kernel are all
-      expressions of the same algebraic object. They did not need to be glued
-      together; they were never separate.
-    </p>
+    <section class="hz-slide" data-scene="1">
+      <h2>Cybersecurity</h2>
+      <p>
+        The wave of AI-driven attacks hitting systems right now — prompt injection,
+        poisoned training data, adversarial inputs that steer a model without
+        triggering its defenses — all share the same root cause: the system has no
+        native way to distinguish valid input from interference, because trust and
+        representation were always separate things that had to be reconciled in
+        software, after the fact.
+      </p>
+      <p>
+        A geometric system closes that gap at the level of the data itself. Valid
+        input composes coherently within the same space as the rest of the system's
+        state — and a composition either closes or it doesn't. A foreign structure
+        that tries to pass as legitimate fails geometrically, the same way a
+        misfolded protein fails to dock with a receptor it was never shaped for.
+      </p>
+      <p>
+        What this produces is a substrate where the data carries its own proof of
+        integrity, where an agent's sense of self is mathematically defined, and
+        where compromising it requires breaking the geometry — a fundamentally
+        different attack surface, one shaped by the math rather than patched by
+        the code.
+      </p>
+    </section>
 
-    <h3>The path to hardware is clear</h3>
-    <p>
-      Unit quaternion composition is fixed-width, branch-free, and parallelizable.
-      There is no reason it cannot be a hardware primitive. A chip that does closure
-      arithmetic natively would make verification free at the silicon level, memory
-      algebraic by default, and attention computable without matrix multiplication.
-      This is not speculative &mdash; it is a direct translation of the math to
-      silicon.
-    </p>
+    <section class="hz-slide" data-scene="2">
+      <h2>Trusted Communication</h2>
+      <p>
+        The question that every legal contract, financial transaction, and security
+        protocol has always tried to answer is whether the thing claiming to be true
+        actually is — and the only answer civilization has ever found is social: find
+        an institution both parties trust and have them vouch for it, which works until
+        the institution is slow, or compromised, or simply not present for the
+        transaction that needs to happen right now.
+      </p>
+      <p>
+        Two parties using geometric verification exchange 32 bytes, the composition
+        of their respective records closes against each other or it doesn't, and the
+        math has no room for a forgery because fabricating a valid result requires
+        breaking the geometry rather than finding a gap in a protocol — no certificate
+        authority, no clearing house, the sphere is the guarantee.
+      </p>
+      <p>
+        At the scale autonomous systems are approaching, where AI agents are making
+        consequential decisions faster than any human oversight could follow, the
+        ground truth stops being something an institution maintains and becomes
+        something the math provides directly: a proof the size of a text message,
+        attached to the data itself, available to any two parties anywhere on earth
+        without asking anyone's permission.
+      </p>
+    </section>
 
-    <p>
-      The timeline on this is weeks of focused development, not years. The
-      architecture is defined. The primitives are validated. What remains is
-      engineering.
-    </p>
+    <section class="hz-slide" data-scene="3">
+      <h2>Hardware</h2>
+      <p>
+        Every computer built in the last eighty years follows the same blueprint:
+        one place for instructions, one place for data, one place for computation,
+        all talking to each other across boundaries that were never fundamental —
+        just the way John von Neumann drew the diagram in 1945. The overhead between
+        those boundaries is where most of modern hardware engineering lives.
+      </p>
+      <p>
+        A chip built on geometric arithmetic erases those boundaries because the
+        geometry that holds the data is already the geometry that verifies it, and
+        inference is just measuring distance within that same space — computing,
+        storing, and checking become the same operation, running once.
+      </p>
+      <p>
+        And because the primitive is geometric rather than symbolic, it runs on
+        anything: a sensor, a router, a prosthetic limb, a satellite with no uplink —
+        the same chip architecture that powers a server could power a device
+        the size of a grain of sand.
+      </p>
+    </section>
 
-    <h3>Local transformers become tractable</h3>
-    <p>
-      One of the central costs of modern language models is attention &mdash; the
-      O(n&sup2;) mechanism that compares every token to every other. Closure
-      computes the same operation geometrically: compose, measure distance from
-      identity, act on the largest. That is algebraically equivalent at a fraction
-      of the cost. A cellphone-sized transformer becomes a real possibility when
-      attention is a composition product rather than a matrix multiplication.
-    </p>
+    <section class="hz-slide" data-scene="4">
+      <h2>Biological Computing</h2>
+      <p>
+        Three and a half billion years of evolution produced a computer that runs on
+        20 watts, fits in a human skull, and rewires itself continuously in response
+        to experience — and the operation at the center of every living cell, the one
+        that separates a living system from an inert collection of chemistry, turns
+        out to be the same operation this computer performs as its most basic primitive.
+      </p>
+      <p>
+        The neuroscience already knew this: every living system continuously measures
+        the gap between what it predicts and what it receives, uses that gap to update
+        its model of reality, and runs the same cycle at every scale from a single
+        synapse to the whole organism. The geometric computer runs the same operation
+        in arithmetic, and the observation almost makes itself — hardware built on
+        this foundation and biological tissue are doing the same math.
+      </p>
+      <p>
+        A substrate running the same fundamental operation as biological tissue
+        addresses the gap underneath systems like Neuralink and Synchron — implants
+        whose statistical decoders drift as neurons rewire because the math on each
+        side was never the same — and the vision reaches past neural interfaces:
+        Levin's work on bioelectricity has shown that goal-directed computation runs
+        at every scale of biology, from neurons down to individual cells, and a
+        geometric processor small enough to sit inside a cell could participate in
+        that computation directly, a component woven through living tissue running
+        the same math the cell already runs.
+      </p>
+    </section>
 
-    <p>
-      This is one concrete path to making frontier-level intelligence local,
-      private, and cheap. No server. No API. No dependency.
-    </p>
+    <section class="hz-slide" data-scene="5">
+      <h2>Quantum</h2>
+      <p>
+        Quantum computers have been the most anticipated technology of the last
+        decade, and the hardest to actually use — getting a classical computer to
+        talk to a quantum one requires translating between two systems built on
+        completely different mathematical foundations, and most of the computational
+        advantage bleeds out in that translation before the quantum chip ever runs.
+      </p>
+      <p>
+        The geometry this computer uses — SU(2), the 3-sphere of unit quaternions —
+        is the same mathematical structure that quantum spin lives in: the space the
+        Bloch sphere projects from, the 4π periodicity the carrier tracks natively,
+        the spinor double cover that has always been the mathematical fact underneath
+        quantum mechanics. The braiding operations that make topological quantum chips
+        like Majorana work are rotations in this same space, arriving from a different
+        physical direction at the same mathematical home.
+      </p>
+      <p>
+        What that opens is a bridge researchers have been trying to build for thirty
+        years: the two regimes able to collaborate directly, each doing what it does
+        best, the translation overhead gone, and the quantum advantage finally
+        arriving intact.
+      </p>
+    </section>
 
-    <h3>Trustless communication and storage at scale</h3>
-    <p>
-      Efficient, cryptographic, algebraically composable verification between
-      systems is the foundation of distributed coordination. The verification
-      primitive already does this. Scaled up: distributed ledgers with algebraic
-      summaries rather than hash chains, self-organized agent swarms where every
-      node maintains closure with every other, networks where agreement is
-      geometric rather than consensus-based.
-    </p>
+    <section class="hz-slide" data-scene="6">
+      <h2>Coordination</h2>
+      <p>
+        Every market, standards body, and international institution humanity has ever
+        built exists to solve the same problem: how do you get millions of independent
+        actors to behave coherently toward a shared outcome when none of them can see
+        the whole picture and none of them fully trust each other, and the answer has
+        always required a center — something all parties defer to — which is fine when
+        the actors number in the thousands and the decisions happen over days, and
+        becomes a structural impossibility when the actors number in the billions and
+        the decisions happen in microseconds.
+      </p>
+      <p>
+        Geometric resonance offers a different answer at the level of the math itself:
+        when agents share the same substrate, coordination emerges from the structure
+        because two compositions that resonate cancel to identity — agreement is a
+        geometric event, visible to both parties simultaneously, requiring no arbiter
+        and no latency. A swarm operating on this substrate self-organizes the way a
+        murmuration does, each agent responding to local geometric signal, the global
+        pattern a consequence of the math itself.
+      </p>
+      <p>
+        At civilizational scale, this is the infrastructure question that underlies
+        everything else on this page: supply chains that self-heal in real time,
+        climate sensor networks that coordinate response without waiting for a treaty,
+        AI systems that maintain coherent constraints across millions of simultaneous
+        decisions, energy grids that balance without central dispatch — the question
+        shifts from who we trust to coordinate to what geometry we choose to
+        coordinate around.
+      </p>
+    </section>
 
-    <p>
-      The supporting literature in the repository already identifies these
-      directions independently &mdash; hyperagents, sheaf-based distributed
-      learning, evolutionary optimization at scale. The Closure geometry
-      sits where they converge.
-    </p>
-
-    <h3>One object, all the way down</h3>
-    <p>
-      The deepest frame is this: representation, memory, verification, retrieval,
-      and execution do not need to be separate kinds of objects. They are separate
-      now because we inherited that architecture. There is no technical reason
-      they have to stay that way.
-    </p>
-
-    <p>
-      A MacBook is a general computer. A cellphone is a general computer. A
-      transformer counts as one. What is being built here is a new class of
-      general computer &mdash; one where the primitive is not a register or a
-      floating-point operation but a composition on a sphere.
-    </p>
-
-    <p style="margin-top: 1.8em;">
-      <a href="collaborate.html">If this interests you &rarr;</a>
-    </p>
   </div>
+
+  <!-- Right: static canvas column -->
+  <div class="hz-canvas-col">
+    <canvas id="webgl-canvas"></canvas>
+    <div class="hz-dots">
+      <div class="scene-dot active"></div>
+      <div class="scene-dot"></div>
+      <div class="scene-dot"></div>
+      <div class="scene-dot"></div>
+      <div class="scene-dot"></div>
+      <div class="scene-dot"></div>
+      <div class="scene-dot"></div>
+    </div>
+  </div>
+
+</div>
 </main>
-
-
 
 <div class="ori-badge">
   <div class="ori-badge-ring"><canvas id="ori-canvas"></canvas></div>
@@ -158,7 +344,8 @@
 </div>
 
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
-<script defer src="ribbon.js?v=2026-04-01-1"></script>
-<script defer src="shatter.js?v=2026-04-01-1"></script>
+<script defer src="ribbon.js"></script>
+<script src="shatter.js"></script>
+<script src="horizon-webgl.js"></script>
 </body>
 </html>
