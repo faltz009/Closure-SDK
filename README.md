@@ -193,6 +193,7 @@ Independent research, done on personal time, released for free.
 |---|---|
 | BTC | `155jaKugGGhdwX2Dp55bfHWpWbWD3Gr3PG` |
 | ETH (ERC-20) | `0x31f0253180b03c16a0aa2d7091311d7363ef22a4` |
+| SOL | `HdGFaL6A8z8AetnyPn6vKPU4QJGaSHBtoqPK32qbe6wV` |
 | PIX (Brazil) | `walter.h057@gmail.com` |
 
 ## License
